@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-int num_of_generated = 5;
+int num_of_generated = 10;
 
 int main(int argc, char** argv) {
 

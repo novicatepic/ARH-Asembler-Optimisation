@@ -9,8 +9,8 @@ SECTION .bss
     entry_file_path resq 1
     output_file_path resq 1
     num_of_elements resq 1
-    x_values resq 10000000
-    y_values resq 10000000
+    x_values resq 10
+    y_values resq 10
     rez resq 1
     
 
@@ -98,7 +98,7 @@ _start:
     push rdi 
     ;mov rdi, rcx ;TEST
     mov rsi, x_values   ;this should read into x_values, right?
-    mov rdx, 40      ;test, was 40
+    mov rdx, rax      ;test, was 40
     mov rax, 0 
     syscall
 
@@ -107,7 +107,7 @@ _start:
     pop rdi  ;file descriptor was on stack, poping it back so I can work with files
     push rdi  
     mov rsi, y_values   ;this should read into y_values
-    mov rdx, 40     
+    mov rdx, rax     
     mov rax, 0 
     syscall
 
@@ -130,62 +130,54 @@ _start:
     mov rsi, 777o                   ;rwx for all
     syscall
 
-    mov rax, 2
-    mov rdi, [output_file_path]
-    mov rsi, 1                   ;read/write flag, only write flag (2) also a viable option
-    syscall                         ;open output file
+;    mov rax, 2
+;    mov rdi, [output_file_path]
+;    mov rsi, 1                   ;read/write flag, only write flag (2) also a viable option
+;    syscall                         ;open output file
 
-    cmp rax, 0
-    jbe .mistakes_have_been_made 
+;    cmp rax, 0
+;    jbe .mistakes_have_been_made 
 
-    mov rdi, rax ;save file descriptor
+;    mov rdi, rax ;save file descriptor
 
     ;why am i writting this into file? so i can understand what's happening a little bit better
-    push rdi
-    mov rax, 1
-    mov rdx, 4                  ;this one is valid, I suppose that num of elements is going to be an integer
-    mov rsi, num_of_elements
-    syscall
+;    push rdi
+;    mov rax, 1
+;    mov rdx, 4                  ;this one is valid, I suppose that num of elements is going to be an integer
+;    mov rsi, num_of_elements
+;    syscall
 
-    call .num_elements_to_rax
+ ;   call .num_elements_to_rax
 
-    pop rdi 
-    push rdi
-    mov rdx, rax                 ;only testing because I know that there are 5 x elements in a file, was 40
-    xor rax, rax 
-    mov rax, 1
-    mov rsi, x_values
-    syscall
+;    pop rdi 
+;    push rdi
+;    mov rdx, rax                 ;only testing because I know that there are 5 x elements in a file, was 40
+;    xor rax, rax 
+;    mov rax, 1
+;    mov rsi, x_values
+;    syscall
 
 
-    call .num_elements_to_rax
-    pop rdi 
-    push rdi
+;    call .num_elements_to_rax
+;    pop rdi 
+;    push rdi
     ;mov rdx, rax
-    mov rdx, rax
-    xor rax, rax  
-    mov rax, 1
-    mov rsi, y_values 
-    syscall
+;    mov rdx, rax
+;    xor rax, rax  
+;    mov rax, 1
+;    mov rsi, y_values 
+;    syscall
 
-    mov rax, 3
-    syscall
+;    mov rax, 3
+;    syscall
 
-    pop rdi         ;didn't have to do the last push, whatever
+;    pop rdi         ;didn't have to do the last push, whatever
     call .clean_registers
 
     ;DIDN'T HAVE TO DO EVERYTHING BEFORE, BUT I'VE DONE IT JUST TO UNDERSTAND FILES A LITTLE BIT
-    ;WRITTING AND READING FROM FILES WORKS, NEXT STOP => IMPLEMENT LINEAR REGRESSION
-    
-    ;DOUBLE PRECISION NUMBERS -> CANNOT BE DONE WITH STANDARD REGISTERS
-    lea rax, qword[x_values]
-    lea rbx, qword[x_values + 8]    
+    ;WRITTING AND READING FROM FILES WORKS, NEXT STOP => IMPLEMENT LINEAR REGRESSION  
 
-    ;movsd xmm0, qword [tmp1]
-    ;movsd xmm1, qword [tmp2]
-    ;addsd xmm0, xmm1 
-
-    mov cl, byte[num_of_elements]      ;how many times it's going to loop
+    mov ecx, dword[num_of_elements]      ;how many times it's going to loop
     mov rsi, 0                          
     .sumX:  
         movsd xmm1, qword[x_values + rsi * 8]
@@ -203,7 +195,6 @@ _start:
 
     mov cl, byte[num_of_elements]
     mov rsi, 0
-    ;mov rdi, 0 second not needed
     .sumXMultiplY: 
         movsd xmm1, qword[x_values + rsi * 8]
         movsd xmm4, qword[y_values + rsi * 8]
@@ -222,7 +213,47 @@ _start:
         inc rsi 
         loop .sumXSquare
 
+    movsd xmm1, xmm3 
+    
+    xor rax, rax 
 
+    mov eax, dword[num_of_elements]
+
+    cvtsi2sd xmm4, eax              ;CONVERTED TO DOUBLE SINCE I NEED NUMBER OF ELEMENTS
+
+    movsd xmm6, xmm3 
+
+    ;XMM1(SUM(Xi))
+    ;XMM2(SUM(Yi))
+    ;XMM3(SUM(Xi))
+    ;XMM4(n)
+    ;XMM5(SUM(Xi*Yi))
+    ;XMM6(SUM(Xi))
+    ;XMM8(SUM(Xi^2))
+
+    ;15 xmm registers
+    movsd xmm7, xmm5  ;first operand upper side
+    movsd xmm9, xmm2  
+    divsd xmm9, xmm1 
+    mulsd xmm9, xmm8 
+    subsd xmm7, xmm9 ;WE GOT THE FIRST PART OF A, XMM7 TAKEN AWAY
+
+    movsd xmm9, xmm1
+    movsd xmm10, xmm4 
+    divsd xmm10, xmm1 
+    mulsd xmm10, xmm8
+    subsd xmm9, xmm10 ;xmm9 TAKEN AWAY
+
+    divsd xmm7, xmm9 ;xmm9 NOW FREE => b parameter STORED IN XMM7
+
+    movsd xmm9, xmm2 
+    movsd xmm10, xmm4 
+    mulsd xmm10, xmm7 
+    subsd xmm9, xmm10 
+    divsd xmm9, xmm1 ;a parameter STORED IN XMM9
+
+
+    ;BEFORE PLACING VALUES INTO OUTPUT_FILE, CALCULATE THE FORMULA!
     ;NEED TO FINISH PLACING VALUES INTO OUTPUT_FILE
 
     mov rax, 2
@@ -233,17 +264,31 @@ _start:
     cmp rax, 0
     jbe .mistakes_have_been_made 
 
-    movdqu oword[rez],xmm0
+    ;was movdqu
+    movdqu oword[rez],xmm9  ;a parameter was stored in xmm9
 
     mov rdi, rax ;save file descriptor
 
-    ;mov [rez], xmm8
-
     push rdi
     mov rax, 1
-    mov rdx, 16                
+    mov rdx, 8                
+    mov rsi, rez        ;writting a parameter to output file 
+    syscall
+
+    movdqu oword[rez],xmm7  ;b parameter was stored in xmm7
+
+    pop rdi 
+    mov rax, 1
+    mov rdx, 8
     mov rsi, rez 
     syscall
+
+    mov rax, 3
+    syscall
+
+    ;PARAMETRI USPJESNO UPISANI U MEMORIJU
+
+    call .clean_registers
 
 .end:
     mov rax, 60
