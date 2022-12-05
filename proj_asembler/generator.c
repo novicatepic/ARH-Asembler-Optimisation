@@ -13,12 +13,20 @@ int main(int argc, char** argv) {
     double yArray[num_of_generated];
 
     for(int i = 0; i < 2; i++) {
+        if(i == 0) {
+            printf("Unesite elemente za vektor x: ");
+        } else {
+            printf("Unesite elemente za vektor y: ");
+        }
+        
         for(int j = 0; j < num_of_generated; j++) {
-            double randNum = rand();
+            printf("Unesite %d.broj: ", j+1);
+            double unos = 0.0;
+            scanf("%lf", &unos);
             if(i == 0) {
-                xArray[j] = randNum;
+                xArray[j] = unos;
             } else {
-                yArray[j] = randNum;
+                yArray[j] = unos;
             }
         }
     }

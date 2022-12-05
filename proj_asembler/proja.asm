@@ -1,13 +1,18 @@
 SECTION .data 
     error_string db "Something went wrong!", 0
     error_string_length EQU $ - error_string
+    tmp1 dq 1.2
+    tmp2 dq 1.3
 
+;align 32 
 SECTION .bss
     entry_file_path resq 1
     output_file_path resq 1
     num_of_elements resq 1
-    x_values resq 1
-    y_values resq 1
+    x_values resq 10000000
+    y_values resq 10000000
+    rez resq 1
+    
 
 SECTION .text
 global _start
@@ -30,6 +35,7 @@ _start:
     pop rax
 
     ;even though two arguments are required, there is a third one implicitly
+    ;one argument is entry file which already exists, and the second one is the output file that should be created
     cmp rax, 3
     jne .mistakes_have_been_made
 
@@ -55,7 +61,7 @@ _start:
     ;this works as expected
     mov rdi, rax
     mov rax, 0                          ;read from file
-    mov rsi, num_of_elements           
+    mov rsi, num_of_elements          
     mov rdx, 4                          ;reading 4 bytes => integer which represents number of elements
     push rdi                            ;gonna need rdi later, file not closed
     syscall
@@ -64,7 +70,7 @@ _start:
 
     ;allocating space for x values
     mov rdi, 0      
-    mov rsi, rax                         ;rbx should have num of elements placed inside times double data for example 5 values of x * 8 = 40
+    mov rsi, rax                         ;rax should have num of elements placed inside times double data for example 5 values of x * 8 = 40
     mov rdx, 2                          ;prot value, write+read
     mov r10, 22h
     mov r8, -1
@@ -90,19 +96,18 @@ _start:
 
     pop rdi  ;file descriptor was on stack, poping it back so I can work with files
     push rdi 
-    ;xor rax, rax  
+    ;mov rdi, rcx ;TEST
     mov rsi, x_values   ;this should read into x_values, right?
-    mov rdx, rax       ;test, was 40
+    mov rdx, 40      ;test, was 40
     mov rax, 0 
     syscall
 
-    call .num_elements_to_rax
+    call .num_elements_to_rax           ;DATA IS LOST???????
 
     pop rdi  ;file descriptor was on stack, poping it back so I can work with files
-    push rdi 
-    ;xor rax, rax   
-    mov rsi, y_values   ;this should read into x_values, right_
-    mov rdx, rax         ;test
+    push rdi  
+    mov rsi, y_values   ;this should read into y_values
+    mov rdx, 40     
     mov rax, 0 
     syscall
 
@@ -156,23 +161,89 @@ _start:
     call .num_elements_to_rax
     pop rdi 
     push rdi
+    ;mov rdx, rax
     mov rdx, rax
     xor rax, rax  
     mov rax, 1
     mov rsi, y_values 
     syscall
 
-    ;pop rdi 
-    ;mov rdx, rbx 
-    ;mov rsi, 
-
     mov rax, 3
     syscall
 
+    pop rdi         ;didn't have to do the last push, whatever
     call .clean_registers
 
+    ;DIDN'T HAVE TO DO EVERYTHING BEFORE, BUT I'VE DONE IT JUST TO UNDERSTAND FILES A LITTLE BIT
     ;WRITTING AND READING FROM FILES WORKS, NEXT STOP => IMPLEMENT LINEAR REGRESSION
-    ;BUT BEFORE THAT, MAKE IT WORK LIKE IT SHOULD WORK
+    
+    ;DOUBLE PRECISION NUMBERS -> CANNOT BE DONE WITH STANDARD REGISTERS
+    lea rax, qword[x_values]
+    lea rbx, qword[x_values + 8]    
+
+    ;movsd xmm0, qword [tmp1]
+    ;movsd xmm1, qword [tmp2]
+    ;addsd xmm0, xmm1 
+
+    mov cl, byte[num_of_elements]      ;how many times it's going to loop
+    mov rsi, 0                          
+    .sumX:  
+        movsd xmm1, qword[x_values + rsi * 8]
+        addsd xmm3, xmm1                        ;IN XMM3 IS PLACED SUM(Xi) i = 1,...,num_of_elements
+        add rsi, 1 
+        loop .sumX
+
+    mov cl, byte[num_of_elements]
+    mov rsi, 0
+    .sumY:
+        movsd xmm1, qword[y_values + rsi * 8]
+        addsd xmm2, xmm1                        ;IN XMM2 IS PLACED SUM(Yi) i = 1,...,num_of_elements
+        inc rsi 
+        loop .sumY
+
+    mov cl, byte[num_of_elements]
+    mov rsi, 0
+    ;mov rdi, 0 second not needed
+    .sumXMultiplY: 
+        movsd xmm1, qword[x_values + rsi * 8]
+        movsd xmm4, qword[y_values + rsi * 8]
+        mulsd xmm1, xmm4    ;Xi*Yi
+        addsd xmm5, xmm1 ;Sum(Xi*Yi)             ;PLACED IN XMM5 (COMMENTING BECAUSE IT'S EASIER FOR ME)
+        inc rsi 
+        loop .sumXMultiplY
+
+    mov cl, byte[num_of_elements]
+    mov rsi, 0
+    .sumXSquare:
+        movsd xmm6, qword[x_values + rsi * 8]
+        movsd xmm7, qword[x_values + rsi * 8]
+        mulsd xmm6, xmm7 ;Xi*Xi
+        addsd xmm8, xmm6 ;Sum(Xi^2)
+        inc rsi 
+        loop .sumXSquare
+
+
+    ;NEED TO FINISH PLACING VALUES INTO OUTPUT_FILE
+
+    mov rax, 2
+    mov rdi, [output_file_path]
+    mov rsi, 1                      ;read/write flag, only write flag (2) also a viable option
+    syscall                         ;open output file
+
+    cmp rax, 0
+    jbe .mistakes_have_been_made 
+
+    movdqu oword[rez],xmm0
+
+    mov rdi, rax ;save file descriptor
+
+    ;mov [rez], xmm8
+
+    push rdi
+    mov rax, 1
+    mov rdx, 16                
+    mov rsi, rez 
+    syscall
 
 .end:
     mov rax, 60
