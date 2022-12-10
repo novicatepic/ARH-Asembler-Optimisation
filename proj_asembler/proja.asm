@@ -1,19 +1,17 @@
-SECTION .data align=32
-    tmp dq 1.0,2.0,3.0,4.0
+SECTION .data align=16
+    tmp dd 1.0,2.0,3.0,4.0
+    tmp2 dq 1.0,2.0,3.0,4.0
     error_string db "Something went wrong!", 0
     error_string_length EQU $ - error_string
     
-
-;align 32 
 SECTION .bss
     entry_file_path resq 1
     output_file_path resq 1
-    num_of_elements resq 1
-    x_values resq 10
-    y_values resq 10
+    num_of_elements resq 1   
+    x_values resq 32
+    y_values resq 32
     rez resq 1
     
-
 SECTION .text
 global _start
 _start:
@@ -176,11 +174,11 @@ _start:
 
     ;DIDN'T HAVE TO DO EVERYTHING BEFORE, BUT I'VE DONE IT JUST TO UNDERSTAND FILES A LITTLE BIT
     ;WRITTING AND READING FROM FILES WORKS, NEXT STOP => IMPLEMENT LINEAR REGRESSION  
-
+    mov rbx, 4      ;should be 8
     mov ecx, dword[num_of_elements]      ;how many times it's going to loop
     mov rsi, 0                          
     .sumX:  
-        movsd xmm1, qword[x_values + rsi * 8]
+        movsd xmm1, qword[x_values + rsi * 4]
         addsd xmm3, xmm1                        ;IN XMM3 IS PLACED SUM(Xi) i = 1,...,num_of_elements
         add rsi, 1 
         loop .sumX
@@ -188,7 +186,7 @@ _start:
     mov cl, byte[num_of_elements]
     mov rsi, 0
     .sumY:
-        movsd xmm1, qword[y_values + rsi * 8]
+        movsd xmm1, qword[y_values + rsi * 4]
         addsd xmm2, xmm1                        ;IN XMM2 IS PLACED SUM(Yi) i = 1,...,num_of_elements
         inc rsi 
         loop .sumY
@@ -196,8 +194,8 @@ _start:
     mov cl, byte[num_of_elements]
     mov rsi, 0
     .sumXMultiplY: 
-        movsd xmm1, qword[x_values + rsi * 8]
-        movsd xmm4, qword[y_values + rsi * 8]
+        movsd xmm1, qword[x_values + rsi * 4]
+        movsd xmm4, qword[y_values + rsi * 4]
         mulsd xmm1, xmm4    ;Xi*Yi
         addsd xmm5, xmm1 ;Sum(Xi*Yi)             ;PLACED IN XMM5 (COMMENTING BECAUSE IT'S EASIER FOR ME)
         inc rsi 
@@ -206,8 +204,8 @@ _start:
     mov cl, byte[num_of_elements]
     mov rsi, 0
     .sumXSquare:
-        movsd xmm6, qword[x_values + rsi * 8]
-        movsd xmm7, qword[x_values + rsi * 8]
+        movsd xmm6, qword[x_values + rsi * 4]
+        movsd xmm7, qword[x_values + rsi * 4]
         mulsd xmm6, xmm7 ;Xi*Xi
         addsd xmm8, xmm6 ;Sum(Xi^2)
         inc rsi 
@@ -220,6 +218,7 @@ _start:
     mov eax, dword[num_of_elements]
 
     cvtsi2sd xmm4, eax              ;CONVERTED TO DOUBLE SINCE I NEED NUMBER OF ELEMENTS
+    ;cvtdq2ps xmm4, eax
 
     movsd xmm6, xmm3 
 
@@ -301,24 +300,57 @@ _start:
     cqo
     div rbx           ;byte works, qword doesn't -> again
 
+    ;movapd ymm1, [tmp]
+
+    movaps xmm0, [tmp]
+
+    mov eax, dword[x_values]
+    mov dword[tmp], eax
+    mov eax, dword[x_values+4]
+    mov dword[tmp+4], eax
+    mov eax, dword[x_values+8]
+    mov dword[tmp+8], eax
+    mov eax, dword[x_values+12]
+    mov dword[tmp+12], eax
+
+    mov eax, dword[x_values+16]
+    mov dword[tmp2], eax
+    mov eax, dword[x_values+20]
+    mov dword[tmp2+4], eax
+    mov eax, dword[x_values+24]
+    mov dword[tmp2+8], eax
+    mov eax, dword[x_values+28]
+    mov dword[tmp2+12], eax
+
     ;movsd xmm1, qword[x_values]
     ;movdqu oword[tmp], xmm1
-    ;movsd xmm1, qword[x_values + 8]
+    ;movsd xmm1, qword[x_values + 4]
     ;movdqu oword[tmp + 4], xmm1
-    ;movsd xmm1, qword[x_values + 16]
+    ;movsd xmm1, qword[x_values + 8]
     ;movdqu oword[tmp + 8], xmm1
-    ;movsd xmm1, qword[x_values + 24]
-    ;movdqu oword[tmp + 16], xmm1
+    ;movsd xmm1, qword[x_values + 12]
+    ;movdqu oword[tmp], xmm1
 
-    ;mov rax, [tmp]
-    ;mov rbx, [tmp + 4]
-    ;mov rcx, [tmp + 8]
-    ;mov rdx, [tmp + 12]     ;everything is coppied correctly, tmp has 4 double values which is 4 * 8bytes = 32*8 =  256 bits
+    ;movsd xmm1, qword[x_values + 16]
+    ;movdqu oword[tmp2], xmm1
+    ;movsd xmm1, qword[x_values + 20]
+    ;movdqu oword[tmp2 + 4], xmm1
+    ;movsd xmm1, qword[x_values + 24]
+    ;movdqu oword[tmp2 + 8], xmm1
+    ;movsd xmm1, qword[x_values + 28]
+    ;movdqu oword[tmp2], xmm1
+
+    mov eax, dword[tmp]
+    mov ebx, dword[tmp + 4]
+    mov ecx, dword[tmp + 8]
+    mov edx, dword[tmp + 12]     ;everything is coppied correctly, tmp has 4 double values which is 4 * 8bytes = 32*8 =  256 bits
 
     ;vmovsd ymm0, yword[x_values]
 
-    ;movaps xmm0, [tmp]
-    vmovaps ymm0, [tmp]
+    movaps xmm0, [tmp]
+    movaps xmm2, [tmp2]
+    addps xmm0, xmm2 
+    ;vmovupd ymm0, [tmp]
 
     ;vmovaps ymm0, qword[x_values]
     ;vmovaps ymm1, qword[x_values + 32]
@@ -352,6 +384,6 @@ _start:
 .num_elements_to_rax:
     xor rax, rax 
     mov al, byte[num_of_elements]
-    mov rbx, 8                      ;each number is double, which should be 8 bytes, so multiplying with that
+    mov rbx, 4  ;moved to double data                      ;each number is double, which should be 8 bytes, so multiplying with that
     mul rbx  
     ret 
