@@ -1,8 +1,8 @@
-SECTION .data 
+SECTION .data align=32
+    tmp dq 1.0,2.0,3.0,4.0
     error_string db "Something went wrong!", 0
     error_string_length EQU $ - error_string
-    tmp1 dq 1.2
-    tmp2 dq 1.3
+    
 
 ;align 32 
 SECTION .bss
@@ -252,6 +252,12 @@ _start:
     subsd xmm9, xmm10 
     divsd xmm9, xmm1 ;a parameter STORED IN XMM9
 
+    movdqu oword[rez],xmm9
+
+    ;THIS IS WHERE PARALLELISM COMES INTO PLAY -> AVX
+    
+
+
 
     ;BEFORE PLACING VALUES INTO OUTPUT_FILE, CALCULATE THE FORMULA!
     ;NEED TO FINISH PLACING VALUES INTO OUTPUT_FILE
@@ -265,7 +271,7 @@ _start:
     jbe .mistakes_have_been_made 
 
     ;was movdqu
-    movdqu oword[rez],xmm9  ;a parameter was stored in xmm9
+      ;a parameter was stored in xmm9
 
     mov rdi, rax ;save file descriptor
 
@@ -286,7 +292,39 @@ _start:
     mov rax, 3
     syscall
 
-    ;PARAMETRI USPJESNO UPISANI U MEMORIJU
+    ;ALGORITHM WITHOUT AVX IMPLEMENTED
+
+    ;STARTING IMPLEMENTATION WITH AVX
+
+    mov al, byte[num_of_elements]
+    mov rbx, 4
+    cqo
+    div rbx           ;byte works, qword doesn't -> again
+
+    ;movsd xmm1, qword[x_values]
+    ;movdqu oword[tmp], xmm1
+    ;movsd xmm1, qword[x_values + 8]
+    ;movdqu oword[tmp + 4], xmm1
+    ;movsd xmm1, qword[x_values + 16]
+    ;movdqu oword[tmp + 8], xmm1
+    ;movsd xmm1, qword[x_values + 24]
+    ;movdqu oword[tmp + 16], xmm1
+
+    ;mov rax, [tmp]
+    ;mov rbx, [tmp + 4]
+    ;mov rcx, [tmp + 8]
+    ;mov rdx, [tmp + 12]     ;everything is coppied correctly, tmp has 4 double values which is 4 * 8bytes = 32*8 =  256 bits
+
+    ;vmovsd ymm0, yword[x_values]
+
+    ;movaps xmm0, [tmp]
+    vmovaps ymm0, [tmp]
+
+    ;vmovaps ymm0, qword[x_values]
+    ;vmovaps ymm1, qword[x_values + 32]
+    ;vmovaps ymm2, qword[x_values + 64]
+    ;vaddps ymm0, ymm1 
+    ;vaddps ymm0, ymm2 
 
     call .clean_registers
 
