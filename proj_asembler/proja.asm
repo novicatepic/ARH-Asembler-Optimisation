@@ -174,11 +174,11 @@ _start:
 
     ;DIDN'T HAVE TO DO EVERYTHING BEFORE, BUT I'VE DONE IT JUST TO UNDERSTAND FILES A LITTLE BIT
     ;WRITTING AND READING FROM FILES WORKS, NEXT STOP => IMPLEMENT LINEAR REGRESSION  
-    mov rbx, 4      ;should be 8
+
     mov ecx, dword[num_of_elements]      ;how many times it's going to loop
     mov rsi, 0                          
     .sumX:  
-        movsd xmm1, qword[x_values + rsi * 4]
+        movsd xmm1, qword[x_values + rsi * 8]
         addsd xmm3, xmm1                        ;IN XMM3 IS PLACED SUM(Xi) i = 1,...,num_of_elements
         add rsi, 1 
         loop .sumX
@@ -186,7 +186,7 @@ _start:
     mov cl, byte[num_of_elements]
     mov rsi, 0
     .sumY:
-        movsd xmm1, qword[y_values + rsi * 4]
+        movsd xmm1, qword[y_values + rsi * 8]
         addsd xmm2, xmm1                        ;IN XMM2 IS PLACED SUM(Yi) i = 1,...,num_of_elements
         inc rsi 
         loop .sumY
@@ -194,8 +194,8 @@ _start:
     mov cl, byte[num_of_elements]
     mov rsi, 0
     .sumXMultiplY: 
-        movsd xmm1, qword[x_values + rsi * 4]
-        movsd xmm4, qword[y_values + rsi * 4]
+        movsd xmm1, qword[x_values + rsi * 8]
+        movsd xmm4, qword[y_values + rsi * 8]
         mulsd xmm1, xmm4    ;Xi*Yi
         addsd xmm5, xmm1 ;Sum(Xi*Yi)             ;PLACED IN XMM5 (COMMENTING BECAUSE IT'S EASIER FOR ME)
         inc rsi 
@@ -204,8 +204,8 @@ _start:
     mov cl, byte[num_of_elements]
     mov rsi, 0
     .sumXSquare:
-        movsd xmm6, qword[x_values + rsi * 4]
-        movsd xmm7, qword[x_values + rsi * 4]
+        movsd xmm6, qword[x_values + rsi * 8]
+        movsd xmm7, qword[x_values + rsi * 8]
         mulsd xmm6, xmm7 ;Xi*Xi
         addsd xmm8, xmm6 ;Sum(Xi^2)
         inc rsi 
@@ -218,7 +218,6 @@ _start:
     mov eax, dword[num_of_elements]
 
     cvtsi2sd xmm4, eax              ;CONVERTED TO DOUBLE SINCE I NEED NUMBER OF ELEMENTS
-    ;cvtdq2ps xmm4, eax
 
     movsd xmm6, xmm3 
 
@@ -251,12 +250,6 @@ _start:
     subsd xmm9, xmm10 
     divsd xmm9, xmm1 ;a parameter STORED IN XMM9
 
-    movdqu oword[rez],xmm9
-
-    ;THIS IS WHERE PARALLELISM COMES INTO PLAY -> AVX
-    
-
-
 
     ;BEFORE PLACING VALUES INTO OUTPUT_FILE, CALCULATE THE FORMULA!
     ;NEED TO FINISH PLACING VALUES INTO OUTPUT_FILE
@@ -270,7 +263,7 @@ _start:
     jbe .mistakes_have_been_made 
 
     ;was movdqu
-      ;a parameter was stored in xmm9
+    movdqu oword[rez],xmm9  ;a parameter was stored in xmm9
 
     mov rdi, rax ;save file descriptor
 
@@ -290,6 +283,10 @@ _start:
 
     mov rax, 3
     syscall
+
+    ;PARAMETRI USPJESNO UPISANI U MEMORIJU
+
+    call .clean_registers
 
     ;ALGORITHM WITHOUT AVX IMPLEMENTED
 
@@ -384,6 +381,6 @@ _start:
 .num_elements_to_rax:
     xor rax, rax 
     mov al, byte[num_of_elements]
-    mov rbx, 4  ;moved to double data                      ;each number is double, which should be 8 bytes, so multiplying with that
+    mov rbx, 8  ;moved to double data                      ;each number is double, which should be 8 bytes, so multiplying with that
     mul rbx  
     ret 
