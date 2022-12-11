@@ -1,8 +1,12 @@
 SECTION .data align=16
-    tmp dd 1.0,2.0,3.0,4.0
-    tmp2 dq 1.0,2.0,3.0,4.0
+    tmp dd 1.0, 2.0, 3.0, 4.0
+    tmp2 dd 50.0,45.0,65.0,78.0
+    temp3 dq 50.0,45.0,65.0,78.0
+    realtmp dq 50.0
+    realtmp2 dd 2.1
     error_string db "Something went wrong!", 0
     error_string_length EQU $ - error_string
+    final_helper do 1.1
     
 SECTION .bss
     entry_file_path resq 1
@@ -11,6 +15,7 @@ SECTION .bss
     x_values resq 32
     y_values resq 32
     rez resq 1
+    ;final_helper resd 4
     
 SECTION .text
 global _start
@@ -292,32 +297,32 @@ _start:
 
     ;STARTING IMPLEMENTATION WITH AVX
 
-    mov al, byte[num_of_elements]
-    mov rbx, 4
-    cqo
-    div rbx           ;byte works, qword doesn't -> again
+    ;mov al, byte[num_of_elements]
+    ;mov rbx, 4
+    ;cqo
+    ;div rbx           ;byte works, qword doesn't -> again
 
     ;movapd ymm1, [tmp]
 
-    movaps xmm0, [tmp]
+    ;movaps xmm0, [tmp]
 
-    mov eax, dword[x_values]
-    mov dword[tmp], eax
-    mov eax, dword[x_values+4]
-    mov dword[tmp+4], eax
-    mov eax, dword[x_values+8]
-    mov dword[tmp+8], eax
-    mov eax, dword[x_values+12]
-    mov dword[tmp+12], eax
+    ;mov rax, qword[x_values]
+    ;mov qword[tmp], rax
+    ;mov rax, qword[x_values+8]
+    ;mov qword[tmp+8], rax
+    ;mov rax, qword[x_values+16]
+    ;mov qword[tmp+16], rax
+    ;mov rax, qword[x_values+24]
+    ;mov qword[tmp+24], rax
 
-    mov eax, dword[x_values+16]
-    mov dword[tmp2], eax
-    mov eax, dword[x_values+20]
-    mov dword[tmp2+4], eax
-    mov eax, dword[x_values+24]
-    mov dword[tmp2+8], eax
-    mov eax, dword[x_values+28]
-    mov dword[tmp2+12], eax
+    ;mov eax, dword[x_values+16]
+    ;mov dword[tmp2], eax
+    ;mov eax, dword[x_values+20]
+    ;mov dword[tmp2+4], eax
+    ;mov eax, dword[x_values+24]
+    ;mov dword[tmp2+8], eax
+    ;mov eax, dword[x_values+28]
+    ;mov dword[tmp2+12], eax
 
     ;movsd xmm1, qword[x_values]
     ;movdqu oword[tmp], xmm1
@@ -337,23 +342,126 @@ _start:
     ;movsd xmm1, qword[x_values + 28]
     ;movdqu oword[tmp2], xmm1
 
-    mov eax, dword[tmp]
-    mov ebx, dword[tmp + 4]
-    mov ecx, dword[tmp + 8]
-    mov edx, dword[tmp + 12]     ;everything is coppied correctly, tmp has 4 double values which is 4 * 8bytes = 32*8 =  256 bits
+    ;mov eax, dword[tmp]
+    ;mov ebx, dword[tmp + 4]
+    ;mov ecx, dword[tmp + 8]
+    ;mov edx, dword[tmp + 12]     ;everything is coppied correctly, tmp has 4 double values which is 4 * 8bytes = 32*8 =  256 bits
 
     ;vmovsd ymm0, yword[x_values]
 
-    movaps xmm0, [tmp]
-    movaps xmm2, [tmp2]
-    addps xmm0, xmm2 
-    ;vmovupd ymm0, [tmp]
+    
+    ;IMPORTANT - CONVERSION FROM DOUBLE TO FLOAT -> CAN'T WORK WITH YMM REGISTERS
+    ;movaps xmm0, [tmp2]
+    ;cvtpd2ps xmm1, [realtmp]
+    ;movdqu oword[realtmp2], xmm1
+    ;movss xmm2, [realtmp2] 
 
-    ;vmovaps ymm0, qword[x_values]
-    ;vmovaps ymm1, qword[x_values + 32]
-    ;vmovaps ymm2, qword[x_values + 64]
-    ;vaddps ymm0, ymm1 
-    ;vaddps ymm0, ymm2 
+    xor rax, rax 
+    mov al, byte[num_of_elements]
+    mov rbx, 4 
+    cqo 
+    div rbx 
+    mov rcx, rax        ;rdx holds mod 
+    mov rsi, 0
+    movsd xmm8, xmm14   ;somewhat clearing xmm8
+    .parallelSums:
+        call .help_function_for_parallel_sums
+        movaps xmm4, [tmp]
+        inc rsi 
+        call .help_function_for_parallel_sums
+        movaps xmm5, [tmp]
+        inc rsi 
+        call .help_function_for_parallel_sums
+        movaps xmm6, [tmp]
+        inc rsi 
+        call .help_function_for_parallel_sums
+        movaps xmm7, [tmp]
+        inc rsi
+        ;inc rsi 
+        ;call .help_function_for_parallel_sums
+        ;movaps xmm9, [tmp]
+        ;inc rsi 
+        ;call .help_function_for_parallel_sums
+        ;movaps xmm10, [tmp]
+        ;inc rsi 
+        ;call .help_function_for_parallel_sums
+        ;movaps xmm12, [tmp]
+        ;inc rsi 
+        ;call .help_function_for_parallel_sums
+        ;movaps xmm13, [tmp]
+        ;inc rsi 
+        ;call .help_function_for_parallel_sums
+        ;movaps xmm14, [tmp]
+        ;inc rsi 
+        ;call .help_function_for_parallel_sums
+        ;movaps xmm15, [tmp]*/
+        addps xmm8, xmm4
+        addps xmm8, xmm5 
+        addps xmm8, xmm6
+        addps xmm8, xmm7
+        loop .parallelSums
+
+    mov rcx, rdx    ;mod -> number of iterations for leftovers
+    .sumLeftovers:  ;not every number mod 4 = 0 :/
+        call .help_function_for_parallel_sums
+        movaps xmm4, [tmp]
+        inc rsi 
+        addps xmm8, xmm4 
+        loop .sumLeftovers
+
+    call .clean_registers
+
+    ;XMM1(SUM(Xi))
+    ;XMM2(SUM(Yi))
+    ;XMM3(SUM(Xi))
+    ;XMM4(n)
+    ;XMM5(SUM(Xi*Yi))
+    ;XMM6(SUM(Xi))
+    ;XMM8(SUM(Xi^2))
+
+    movdqu oword[final_helper], xmm8 
+    mov eax, dword[final_helper]            ;sum(xi)
+    mov ebx, dword[final_helper + 4]        ;sum(yi)
+    mov ecx, dword[final_helper + 8]        ;sum(xi*yi)
+    mov edx, dword[final_helper + 12]       ;sum(xi*xi)
+
+    ;cvtsi2sd xmm4, eax
+    ;movsd xmm1, qword[rax] nicetry:)
+    ;cvtsi2sd xmm1, dword[final_helper]         ;DUNNO HOW TO CAST BACK TO DOUBLE
+    movss xmm1, dword[final_helper]
+    movss xmm3, dword[final_helper] 
+    movss xmm6, dword[final_helper] 
+    movss xmm2, dword[final_helper + 4]
+    movss xmm5, dword[final_helper + 8]
+    movss xmm8, dword[final_helper + 12]
+    ;vpxor xmm4, xmm4   NOPE 
+    ;movsd xmm4, xmm15
+    mov eax, dword[num_of_elements]
+    cvtsi2sd xmm15, eax
+    cvtpd2ps xmm15, xmm15
+
+    ;1,3,6,2,5,8,15 cleared!
+    ;xmm7 -> xmm14
+    ;xmm9 -> xmm13, cuz i copied from up somewhere
+    movss xmm14, xmm5
+    movss xmm13, xmm2  
+    divss xmm13, xmm1 
+    mulss xmm13, xmm8 
+    subss xmm14, xmm13 ;WE GOT THE FIRST PART OF A
+
+    movss xmm13, xmm1
+    movss xmm10, xmm15 
+    divss xmm10, xmm1 
+    mulss xmm10, xmm8
+    subss xmm13, xmm10
+
+    divss xmm14, xmm13 ;b parameter STORED IN XMM14
+
+    movss xmm13, xmm2 
+    movss xmm10, xmm15
+    mulss xmm10, xmm14
+    subss xmm13, xmm10 
+    divss xmm13, xmm1 ;a parameter STORED IN XMM13
 
     call .clean_registers
 
@@ -361,6 +469,25 @@ _start:
     mov rax, 60
     mov rdi, 0
     syscall
+
+.help_function_for_parallel_sums:
+        xor rax, rax 
+        mov rax, qword[x_values + rsi * 8]
+        mov [realtmp], rax 
+        cvtpd2ps xmm0, [realtmp]    ;xmm0 holds converted x value to float
+        cvtpd2ps xmm2, [realtmp]    ;xmm2 also holds x value converted to float   
+        cvtpd2ps xmm3, [realtmp] 
+        mov rax, qword[y_values + rsi * 8]
+        mov [realtmp], rax 
+        cvtpd2ps xmm1, [realtmp]    ;xmm1 holds converted y value to float        
+        mulss xmm2, xmm1                                   ;xmm2 holds float value of xi*yi       
+        mulss xmm3, xmm0                                   ;xmm3 holds float value of xi*xi
+        ;EVERYTHING IS READY TO BE SET INTO POSITIONS!
+        movdqu oword[tmp], xmm0
+        movdqu oword[tmp+4], xmm1 
+        movdqu oword[tmp+8], xmm2
+        movdqu oword[tmp+12], xmm3 
+        ret 
 
 .mistakes_have_been_made:
     mov rax, 1
