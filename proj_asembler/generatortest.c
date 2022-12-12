@@ -8,31 +8,35 @@
 #endif
 
 //inclusive
-double generateRandom(double low, double high) {
+double generateRandomDouble(double low, double high) {
     
     double result;
     result = (double)rand() / ((double) RAND_MAX + 1);
     return (low + result * (high - low));
 }
 
-double myGenerator() {
-    double res = 0.0; 
-    int random = rand();
-    printf("Rand = %d\n", random);
-    res = (double)rand() * 100;
-    return res; 
-}
+int num_elements = 10000;
 
 int main() {
     srand((int)time(NULL));
-    double randomNum = generateRandom(1.0, 250.0);
-    printf("1=%lf\n", randomNum);
-    double randomNum2 = generateRandom(1.0, 250.0);
-    printf("2=%lf\n", randomNum2);
-    double randomNum3 = generateRandom(1.0, 250.0);
-    printf("1=%lf\n", randomNum3);
-    double randomNum4 = generateRandom(1.0, 250.0);
-    printf("2=%lf\n", randomNum4);
+    double xValues[num_elements];
+    double yValues[num_elements];
+
+    FILE* fp = fopen("entry_file2", "wb");
+
+    if(fp != NULL) {
+        fwrite(&num_elements, sizeof(int), 1, fp);
+        for(int i = 0; i < num_elements; i++) {
+            xValues[i] = generateRandomDouble(1, 4);
+            yValues[i] = generateRandomDouble(1, 4);
+        }
+        fwrite(xValues, sizeof(double), num_elements, fp);
+        fwrite(yValues, sizeof(double), num_elements, fp);
+
+        fclose(fp);
+    }
+    
+
     //double ran2 = myGenerator();
     //printf("2=%lf", ran2);
 

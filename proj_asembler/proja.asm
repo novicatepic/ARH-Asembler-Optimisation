@@ -12,8 +12,8 @@ SECTION .bss
     entry_file_path resq 1
     output_file_path resq 1
     num_of_elements resq 1   
-    x_values resq 32
-    y_values resq 32
+    x_values resq 100000
+    y_values resq 100000
     rez resq 1
     ;final_helper resd 4
     
@@ -126,8 +126,8 @@ _start:
 
     call .clean_registers
 
-    call .parallelism
-    call .write_parameters_into_output_file
+    ;call .parallelism
+    ;call .write_parameters_into_output_file
 
     call .clean_registers
 
@@ -136,24 +136,6 @@ _start:
     mov rdi, 0
     syscall
 
-.help_function_for_parallel_sums:
-        xor rax, rax 
-        mov rax, qword[x_values + rsi * 8]
-        mov [realtmp], rax 
-        cvtpd2ps xmm0, [realtmp]    ;xmm0 holds converted x value to float
-        cvtpd2ps xmm2, [realtmp]    ;xmm2 also holds x value converted to float   
-        cvtpd2ps xmm3, [realtmp] 
-        mov rax, qword[y_values + rsi * 8]
-        mov [realtmp], rax 
-        cvtpd2ps xmm1, [realtmp]    ;xmm1 holds converted y value to float        
-        mulss xmm2, xmm1                                   ;xmm2 holds float value of xi*yi       
-        mulss xmm3, xmm0                                   ;xmm3 holds float value of xi*xi
-        ;EVERYTHING IS READY TO BE SET INTO POSITIONS!
-        movdqu oword[tmp], xmm0
-        movdqu oword[tmp+4], xmm1 
-        movdqu oword[tmp+8], xmm2
-        movdqu oword[tmp+12], xmm3 
-        ret 
 
 .mistakes_have_been_made:
     mov rax, 1
@@ -174,7 +156,7 @@ _start:
 
 .num_elements_to_rax:
     xor rax, rax 
-    mov al, byte[num_of_elements]
+    mov eax, dword[num_of_elements]
     mov rbx, 8  ;moved to double data                      ;each number is double, which should be 8 bytes, so multiplying with that
     mul rbx  
     ret 
@@ -188,7 +170,7 @@ _start:
         add rsi, 1 
         loop .sumX
 
-    mov cl, byte[num_of_elements]
+    mov ecx, dword[num_of_elements]
     mov rsi, 0
     .sumY:
         movsd xmm1, qword[y_values + rsi * 8]
@@ -196,7 +178,7 @@ _start:
         inc rsi 
         loop .sumY
 
-    mov cl, byte[num_of_elements]
+    mov ecx, dword[num_of_elements]
     mov rsi, 0
     .sumXMultiplY: 
         movsd xmm1, qword[x_values + rsi * 8]
@@ -206,7 +188,7 @@ _start:
         inc rsi 
         loop .sumXMultiplY
 
-    mov cl, byte[num_of_elements]
+    mov ecx, dword[num_of_elements]
     mov rsi, 0
     .sumXSquare:
         movsd xmm6, qword[x_values + rsi * 8]
@@ -256,9 +238,33 @@ _start:
     divsd xmm9, xmm1 ;a parameter STORED IN XMM9
     ret 
 
+.help_function_for_parallel_sums:
+        ;xor rax, rax 
+        ;mov rax, qword[x_values + rsi * 8]
+        ;mov [realtmp], rax
+        movsd xmm0, qword[x_values + rsi * 8]
+        cvtpd2ps xmm0, xmm0
+        ;cvtpd2ps xmm0, [realtmp]    ;xmm0 holds converted x value to float
+        ;cvtpd2ps xmm2, [realtmp]    ;xmm2 also holds x value converted to float   
+        movss xmm2, xmm0 
+        ;cvtpd2ps xmm3, [realtmp] 
+        movss xmm3, xmm0
+        ;mov rax, qword[y_values + rsi * 8]
+        ;mov [realtmp], rax 
+        movsd xmm1, qword[y_values + rsi * 8]
+        cvtpd2ps xmm1, xmm1    ;xmm1 holds converted y value to float        
+        mulss xmm2, xmm1                                   ;xmm2 holds float value of xi*yi       
+        mulss xmm3, xmm0                                   ;xmm3 holds float value of xi*xi
+        ;EVERYTHING IS READY TO BE SET INTO POSITIONS!
+        movdqu oword[tmp], xmm0
+        movdqu oword[tmp+4], xmm1 
+        movdqu oword[tmp+8], xmm2
+        movdqu oword[tmp+12], xmm3 
+        ret 
+
 .parallelism:
     xor rax, rax 
-    mov al, byte[num_of_elements]
+    mov eax, dword[num_of_elements]
     mov rbx, 4 
     cqo 
     div rbx 
@@ -301,6 +307,7 @@ _start:
         addps xmm8, xmm6
         addps xmm8, xmm7
         loop .parallelSums
+        ret 
 
     mov rcx, rdx    ;mod -> number of iterations for leftovers
     .sumLeftovers:  ;not every number mod 4 = 0 :/
