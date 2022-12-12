@@ -7,6 +7,7 @@ SECTION .data align=16
     error_string db "Something went wrong!", 0
     error_string_length EQU $ - error_string
     final_helper do 1.1
+    ;rez do 1.0
     
 SECTION .bss
     entry_file_path resq 1
@@ -14,7 +15,7 @@ SECTION .bss
     num_of_elements resq 1   
     x_values resq 100000
     y_values resq 100000
-    rez resq 1
+    rez resd 1
     ;final_helper resd 4
     
 SECTION .text
@@ -119,15 +120,15 @@ _start:
 
     call .clean_registers
 
-    call .no_parallelism
-    call .write_parameters_into_output_file
+    ;call .no_parallelism
+    ;call .write_parameters_into_output_file
 
     ;parameters written into output file as they should be
 
     call .clean_registers
 
-    ;call .parallelism
-    ;call .write_parameters_into_output_file
+    call .parallelism
+    call .write_parameters_into_output_file
 
     call .clean_registers
 
@@ -157,56 +158,54 @@ _start:
 .num_elements_to_rax:
     xor rax, rax 
     mov eax, dword[num_of_elements]
-    mov rbx, 8  ;moved to double data                      ;each number is double, which should be 8 bytes, so multiplying with that
+    mov rbx, 4  ;moved to float data                      ;each number is double, which should be 8 bytes, so multiplying with that
     mul rbx  
     ret 
 
 .no_parallelism:
+    call .clear_xmm_registers
     mov ecx, dword[num_of_elements]      ;how many times it's going to loop
     mov rsi, 0                          
     .sumX:  
-        movsd xmm1, qword[x_values + rsi * 8]
-        addsd xmm3, xmm1                        ;IN XMM3 IS PLACED SUM(Xi) i = 1,...,num_of_elements
-        add rsi, 1 
+        movss xmm1, dword[x_values + rsi * 4]
+        addss xmm3, xmm1                        ;IN XMM3 IS PLACED SUM(Xi) i = 1,...,num_of_elements
+        inc rsi 
         loop .sumX
 
     mov ecx, dword[num_of_elements]
     mov rsi, 0
     .sumY:
-        movsd xmm1, qword[y_values + rsi * 8]
-        addsd xmm2, xmm1                        ;IN XMM2 IS PLACED SUM(Yi) i = 1,...,num_of_elements
+        movss xmm1, dword[y_values + rsi * 4]
+        addss xmm2, xmm1                        ;IN XMM2 IS PLACED SUM(Yi) i = 1,...,num_of_elements
         inc rsi 
         loop .sumY
 
     mov ecx, dword[num_of_elements]
     mov rsi, 0
     .sumXMultiplY: 
-        movsd xmm1, qword[x_values + rsi * 8]
-        movsd xmm4, qword[y_values + rsi * 8]
-        mulsd xmm1, xmm4    ;Xi*Yi
-        addsd xmm5, xmm1 ;Sum(Xi*Yi)             ;PLACED IN XMM5 (COMMENTING BECAUSE IT'S EASIER FOR ME)
+        movss xmm1, dword[x_values + rsi * 4]
+        movss xmm4, dword[y_values + rsi * 4]
+        mulss xmm1, xmm4    ;Xi*Yi
+        addss xmm5, xmm1 ;Sum(Xi*Yi)             ;PLACED IN XMM5 (COMMENTING BECAUSE IT'S EASIER FOR ME)
         inc rsi 
         loop .sumXMultiplY
 
     mov ecx, dword[num_of_elements]
     mov rsi, 0
     .sumXSquare:
-        movsd xmm6, qword[x_values + rsi * 8]
-        movsd xmm7, qword[x_values + rsi * 8]
-        mulsd xmm6, xmm7 ;Xi*Xi
-        addsd xmm8, xmm6 ;Sum(Xi^2)
+        movss xmm6, dword[x_values + rsi * 4]
+        movss xmm7, dword[x_values + rsi * 4]
+        mulss xmm6, xmm7 ;Xi*Xi
+        addss xmm8, xmm6 ;Sum(Xi^2)
         inc rsi 
         loop .sumXSquare
 
-    movsd xmm1, xmm3 
-    
+    movss xmm1, xmm3 
     xor rax, rax 
-
     mov eax, dword[num_of_elements]
-
     cvtsi2sd xmm4, eax              ;CONVERTED TO DOUBLE SINCE I NEED NUMBER OF ELEMENTS
-
-    movsd xmm6, xmm3 
+    cvtpd2ps xmm4, xmm4 
+    movss xmm6, xmm3 
 
     ;XMM1(SUM(Xi))
     ;XMM2(SUM(Yi))
@@ -217,33 +216,51 @@ _start:
     ;XMM8(SUM(Xi^2))
 
     ;15 xmm registers
-    movsd xmm7, xmm5  ;first operand upper side
-    movsd xmm9, xmm2  
-    divsd xmm9, xmm1 
-    mulsd xmm9, xmm8 
-    subsd xmm7, xmm9 ;WE GOT THE FIRST PART OF A, XMM7 TAKEN AWAY
+    movss xmm7, xmm5  ;first operand upper side
+    movss xmm9, xmm2  
+    divss xmm9, xmm1 
+    mulss xmm9, xmm8 
+    subss xmm7, xmm9 ;WE GOT THE FIRST PART OF A, XMM7 TAKEN AWAY
 
-    movsd xmm9, xmm1
-    movsd xmm10, xmm4 
-    divsd xmm10, xmm1 
-    mulsd xmm10, xmm8
-    subsd xmm9, xmm10 ;xmm9 TAKEN AWAY
+    movss xmm9, xmm1
+    movss xmm10, xmm4 
+    divss xmm10, xmm1 
+    mulss xmm10, xmm8
+    subss xmm9, xmm10 ;xmm9 TAKEN AWAY
 
-    divsd xmm7, xmm9 ;xmm9 NOW FREE => b parameter STORED IN XMM7
+    divss xmm7, xmm9 ;xmm9 NOW FREE => b parameter STORED IN XMM7
 
-    movsd xmm9, xmm2 
-    movsd xmm10, xmm4 
-    mulsd xmm10, xmm7 
-    subsd xmm9, xmm10 
-    divsd xmm9, xmm1 ;a parameter STORED IN XMM9
+    movss xmm9, xmm2 
+    movss xmm10, xmm4 
+    mulss xmm10, xmm7 
+    subss xmm9, xmm10 
+    divss xmm9, xmm1 ;a parameter STORED IN XMM9
+    ret 
+
+.clear_xmm_registers:
+    xorps xmm1, xmm1 
+    xorps xmm2, xmm2 
+    xorps xmm3, xmm3 
+    xorps xmm4, xmm4 
+    xorps xmm5, xmm5 
+    xorps xmm6, xmm6
+    xorps xmm7, xmm7 
+    xorps xmm8, xmm8 
+    xorps xmm9, xmm9 
+    xorps xmm10, xmm10 
+    xorps xmm11, xmm11 
+    xorps xmm12, xmm12 
+    xorps xmm13, xmm13 
+    xorps xmm14, xmm14 
+    xorps xmm15, xmm15 
     ret 
 
 .help_function_for_parallel_sums:
         ;xor rax, rax 
         ;mov rax, qword[x_values + rsi * 8]
         ;mov [realtmp], rax
-        movsd xmm0, qword[x_values + rsi * 8]
-        cvtpd2ps xmm0, xmm0
+        movss xmm0, dword[x_values + rsi * 4]
+        ;cvtpd2ps xmm0, xmm0
         ;cvtpd2ps xmm0, [realtmp]    ;xmm0 holds converted x value to float
         ;cvtpd2ps xmm2, [realtmp]    ;xmm2 also holds x value converted to float   
         movss xmm2, xmm0 
@@ -251,8 +268,8 @@ _start:
         movss xmm3, xmm0
         ;mov rax, qword[y_values + rsi * 8]
         ;mov [realtmp], rax 
-        movsd xmm1, qword[y_values + rsi * 8]
-        cvtpd2ps xmm1, xmm1    ;xmm1 holds converted y value to float        
+        movss xmm1, dword[y_values + rsi * 4]
+        ;cvtpd2ps xmm1, xmm1    ;xmm1 holds converted y value to float        
         mulss xmm2, xmm1                                   ;xmm2 holds float value of xi*yi       
         mulss xmm3, xmm0                                   ;xmm3 holds float value of xi*xi
         ;EVERYTHING IS READY TO BE SET INTO POSITIONS!
@@ -262,15 +279,20 @@ _start:
         movdqu oword[tmp+12], xmm3 
         ret 
 
+.help_proc_for_parallelism:         ;not sure if I should stack another func in here
+    ret 
+
 .parallelism:
     xor rax, rax 
     mov eax, dword[num_of_elements]
-    mov rbx, 4 
+    mov rbx, 11 
     cqo 
     div rbx 
     mov rcx, rax        ;rdx holds mod 
     mov rsi, 0
-    movsd xmm8, xmm14   ;somewhat clearing xmm8
+    xorps xmm8, xmm8 
+    cmp rax, 0
+    je .helpLabel
     .parallelSums:
         call .help_function_for_parallel_sums
         movaps xmm4, [tmp]
@@ -285,40 +307,54 @@ _start:
         movaps xmm7, [tmp]
         inc rsi
         ;inc rsi 
+        call .help_function_for_parallel_sums
+        movaps xmm9, [tmp]
+        inc rsi 
+        call .help_function_for_parallel_sums
+        movaps xmm10, [tmp]
+        inc rsi 
+        call .help_function_for_parallel_sums
+        movaps xmm12, [tmp]
+        inc rsi 
+        call .help_function_for_parallel_sums
+        movaps xmm13, [tmp]
+        inc rsi 
+        call .help_function_for_parallel_sums
+        movaps xmm14, [tmp]
+        inc rsi 
+        call .help_function_for_parallel_sums
+        movaps xmm15, [tmp]
+        inc rsi 
+        call .help_function_for_parallel_sums
+        movaps xmm11, [tmp]
+        inc rsi 
         ;call .help_function_for_parallel_sums
-        ;movaps xmm9, [tmp]
-        ;inc rsi 
-        ;call .help_function_for_parallel_sums
-        ;movaps xmm10, [tmp]
-        ;inc rsi 
-        ;call .help_function_for_parallel_sums
-        ;movaps xmm12, [tmp]
-        ;inc rsi 
-        ;call .help_function_for_parallel_sums
-        ;movaps xmm13, [tmp]
-        ;inc rsi 
-        ;call .help_function_for_parallel_sums
-        ;movaps xmm14, [tmp]
-        ;inc rsi 
-        ;call .help_function_for_parallel_sums
-        ;movaps xmm15, [tmp]*/
         addps xmm8, xmm4
         addps xmm8, xmm5 
         addps xmm8, xmm6
         addps xmm8, xmm7
-        loop .parallelSums
-        ret 
+        addps xmm8, xmm9 
+        addps xmm8, xmm10 
+        addps xmm8, xmm12
+        addps xmm8, xmm13
+        addps xmm8, xmm14
+        addps xmm8, xmm15 
+        addps xmm8, xmm11
 
-    mov rcx, rdx    ;mod -> number of iterations for leftovers
-    .sumLeftovers:  ;not every number mod 4 = 0 :/
+        dec ecx 
+        jnz .parallelSums       ;have to do it because of an error
+        ;ret 
+
+    .helpLabel:
+        mov rcx, rdx    ;mod -> number of iterations for leftovers
+    .sumLeftovers:  ;not every number mod 11 = 0 :/
         call .help_function_for_parallel_sums
         movaps xmm4, [tmp]
         inc rsi 
         addps xmm8, xmm4 
         loop .sumLeftovers
 
-    call .clean_registers
-
+    
     ;XMM1(SUM(Xi))
     ;XMM2(SUM(Yi))
     ;XMM3(SUM(Xi))
@@ -328,14 +364,10 @@ _start:
     ;XMM8(SUM(Xi^2))
 
     movdqu oword[final_helper], xmm8 
-    mov eax, dword[final_helper]            ;sum(xi)
-    mov ebx, dword[final_helper + 4]        ;sum(yi)
-    mov ecx, dword[final_helper + 8]        ;sum(xi*yi)
-    mov edx, dword[final_helper + 12]       ;sum(xi*xi)
 
-    ;cvtsi2sd xmm4, eax
-    ;movsd xmm1, qword[rax] nicetry:)
-    ;cvtsi2sd xmm1, dword[final_helper]         ;DUNNO HOW TO CAST BACK TO DOUBLE
+    call .clean_registers
+    call .clear_xmm_registers
+
     movss xmm1, dword[final_helper]
     movss xmm3, dword[final_helper] 
     movss xmm6, dword[final_helper] 
@@ -351,34 +383,34 @@ _start:
     ;1,3,6,2,5,8,15 cleared!
     ;xmm7 -> xmm14
     ;xmm9 -> xmm13, cuz i copied from up somewhere
-    movss xmm14, xmm5
-    movss xmm13, xmm2  
-    divss xmm13, xmm1 
-    mulss xmm13, xmm8 
-    subss xmm14, xmm13 ;WE GOT THE FIRST PART OF A
+    movss xmm7, xmm5
+    movss xmm9, xmm2  
+    divss xmm9, xmm1 
+    mulss xmm9, xmm8 
+    subss xmm7, xmm9 ;WE GOT THE FIRST PART OF A
 
-    movss xmm13, xmm1
+    movss xmm9, xmm1
     movss xmm10, xmm15 
     divss xmm10, xmm1 
     mulss xmm10, xmm8
-    subss xmm13, xmm10
+    subss xmm9, xmm10
 
-    divss xmm14, xmm13 ;b parameter STORED IN XMM14
+    divss xmm7, xmm9 ;b parameter STORED IN XMM7
 
-    movss xmm13, xmm2 
+    movss xmm9, xmm2 
     movss xmm10, xmm15
-    mulss xmm10, xmm14
-    subss xmm13, xmm10 
-    divss xmm13, xmm1 ;a parameter STORED IN XMM13
+    mulss xmm10, xmm7
+    subss xmm9, xmm10 
+    divss xmm9, xmm1 ;a parameter STORED IN XMM9
 
     ;mov oword[final_helper], xmm13 
-    cvtps2pd xmm13, xmm13   ;converted a to double
-    cvtps2pd xmm14, xmm14   ;converted b to double
+    ;cvtps2pd xmm13, xmm13   ;converted a to double
+    ;cvtps2pd xmm14, xmm14   ;converted b to double
     ;xorps xmm7, xmm7  how to clear a xmm7 register, a xmm9, b xmm7
-    xorps xmm7, xmm7 
-    xorps xmm9, xmm9 
-    movsd xmm9, xmm13   ;moving result to xmm9 because it's easier to call one procedure for two things 
-    movsd xmm7, xmm14   ;same reasong as mentioned above
+    ;xorps xmm7, xmm7 
+    ;xorps xmm9, xmm9 
+    ;movsd xmm9, xmm13   ;moving result to xmm9 because it's easier to call one procedure for two things 
+    ;movsd xmm7, xmm14   ;same reasong as mentioned above
     ret 
 
 ;unnecessary procedure
@@ -452,20 +484,22 @@ _start:
     ;was movdqu
     movdqu oword[rez],xmm9  ;a parameter was stored in xmm9
 
+    mov rbx, [rez]
     mov rdi, rax ;save file descriptor
 
     push rdi
     mov rax, 1
-    mov rdx, 8                
-    mov rsi, rez        ;writting a parameter to output file 
+    mov rdx, 4                
+    mov rsi, rez      ;writting a parameter to output file 
     syscall
 
     movdqu oword[rez],xmm7  ;b parameter was stored in xmm7
+    ;mov rbx, [rez]
 
     pop rdi 
     mov rax, 1
-    mov rdx, 8
-    mov rsi, rez 
+    mov rdx, 4
+    mov rsi, rez
     syscall
 
     call .close_file

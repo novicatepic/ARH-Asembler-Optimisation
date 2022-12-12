@@ -8,10 +8,10 @@
 #endif
 
 //inclusive
-double generateRandomDouble(double low, double high) {
+float generateRandomFloat(float low, float high) {
     
-    double result;
-    result = (double)rand() / ((double) RAND_MAX + 1);
+    float result;
+    result = (float)rand() / ((float) RAND_MAX + 1);
     return (low + result * (high - low));
 }
 
@@ -19,19 +19,19 @@ int num_elements = 10000;
 
 int main() {
     srand((int)time(NULL));
-    double xValues[num_elements];
-    double yValues[num_elements];
+    float xValues[num_elements];
+    float yValues[num_elements];
 
     FILE* fp = fopen("entry_file2", "wb");
 
     if(fp != NULL) {
         fwrite(&num_elements, sizeof(int), 1, fp);
         for(int i = 0; i < num_elements; i++) {
-            xValues[i] = generateRandomDouble(1, 4);
-            yValues[i] = generateRandomDouble(1, 4);
+            xValues[i] = (float)generateRandomFloat(1, 4);
+            yValues[i] = (float)generateRandomFloat(1, 4);
         }
-        fwrite(xValues, sizeof(double), num_elements, fp);
-        fwrite(yValues, sizeof(double), num_elements, fp);
+        fwrite(xValues, sizeof(float), num_elements, fp);
+        fwrite(yValues, sizeof(float), num_elements, fp);
 
         fclose(fp);
     }
