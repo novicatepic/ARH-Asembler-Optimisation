@@ -15,7 +15,7 @@ float generateRandomFloat(float low, float high) {
     return (low + result * (high - low));
 }
 
-int num_elements = 10000;
+int num_elements = 99999;
 
 int main() {
     srand((int)time(NULL));
@@ -27,8 +27,8 @@ int main() {
     if(fp != NULL) {
         fwrite(&num_elements, sizeof(int), 1, fp);
         for(int i = 0; i < num_elements; i++) {
-            xValues[i] = (float)generateRandomFloat(1, 4);
-            yValues[i] = (float)generateRandomFloat(1, 4);
+            xValues[i] = (float)generateRandomFloat(1, 10000);
+            yValues[i] = (float)generateRandomFloat(1, 10000);
         }
         fwrite(xValues, sizeof(float), num_elements, fp);
         fwrite(yValues, sizeof(float), num_elements, fp);

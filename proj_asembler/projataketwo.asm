@@ -6,15 +6,17 @@ SECTION .data align=16
     realtmp2 dd 2.1
     error_string db "Something went wrong!", 0
     error_string_length EQU $ - error_string
-    final_helper do 1.1
+    final_helper dd 1.0, 2.0, 3.0, 4.0
+    ones dd 1.0, 1.0, 1.0, 1.0
+    tmpHelper dd 1.0
     ;rez do 1.0
     
 SECTION .bss
     entry_file_path resq 1
     output_file_path resq 1
     num_of_elements resq 1   
-    x_values resq 100000
-    y_values resq 100000
+    x_values resd 100000
+    y_values resd 100000
     rez resd 1
     ;final_helper resd 4
     
@@ -120,15 +122,15 @@ _start:
 
     call .clean_registers
 
-    ;call .no_parallelism
-    ;call .write_parameters_into_output_file
+    call .no_parallelism
+    call .write_parameters_into_output_file
 
     ;parameters written into output file as they should be
 
     call .clean_registers
 
-    call .parallelism
-    call .write_parameters_into_output_file
+    ;call .parallelism
+    ;call .write_parameters_into_output_file
 
     call .clean_registers
 
@@ -216,6 +218,10 @@ _start:
     ;XMM8(SUM(Xi^2))
 
     ;15 xmm registers
+    call .calculate_parameters
+    ret 
+
+.calculate_parameters:
     movss xmm7, xmm5  ;first operand upper side
     movss xmm9, xmm2  
     divss xmm9, xmm1 
@@ -235,7 +241,7 @@ _start:
     mulss xmm10, xmm7 
     subss xmm9, xmm10 
     divss xmm9, xmm1 ;a parameter STORED IN XMM9
-    ret 
+    ret
 
 .clear_xmm_registers:
     xorps xmm1, xmm1 
@@ -271,9 +277,24 @@ _start:
         movdqu oword[tmp+12], xmm3 
         ret 
 
+.clear_necessary_registers:
+    xorps xmm1, xmm1
+    xorps xmm2, xmm2
+    xorps xmm3, xmm3
+    xorps xmm4, xmm4
+    xorps xmm8, xmm8
+    xorps xmm9, xmm9
+    xorps xmm10, xmm10
+    xorps xmm11, xmm11
+    xorps xmm12, xmm12
+    xorps xmm13, xmm13
+    xorps xmm14, xmm14
+    xorps xmm15, xmm15
+    ret
 
 .parallelism:
-    xor rax, rax 
+    call .clear_xmm_registers
+    call .clean_registers
     mov eax, dword[num_of_elements]
     mov rbx, 4
     cqo 
@@ -283,56 +304,27 @@ _start:
     xorps xmm8, xmm8 
     cmp rax, 0
     je .helpLabel
-    .parallelSums:
-        call .help_function_for_parallel_sums
-        movaps xmm4, [tmp]
-        inc rsi 
-        call .help_function_for_parallel_sums
-        movaps xmm5, [tmp]
-        inc rsi 
-        call .help_function_for_parallel_sums
-        movaps xmm6, [tmp]
-        inc rsi 
-        call .help_function_for_parallel_sums
-        movaps xmm7, [tmp]
-        inc rsi
-        ;inc rsi 
-        ;call .help_function_for_parallel_sums
-        ;movaps xmm9, [tmp]
-        ;inc rsi 
-        ;call .help_function_for_parallel_sums
-        ;movaps xmm10, [tmp]
-        ;inc rsi 
-        ;call .help_function_for_parallel_sums
-        ;movaps xmm12, [tmp]
-        ;inc rsi 
-        ;call .help_function_for_parallel_sums
-        ;movaps xmm13, [tmp]
-        ;inc rsi 
-        ;call .help_function_for_parallel_sums
-        ;movaps xmm14, [tmp]
-        ;inc rsi 
-        ;call .help_function_for_parallel_sums
-        ;movaps xmm15, [tmp]
-        ;inc rsi 
-        ;call .help_function_for_parallel_sums
-        ;movaps xmm11, [tmp]
-        ;inc rsi 
-        addps xmm8, xmm4
-        addps xmm8, xmm5 
-        addps xmm8, xmm6
-        addps xmm8, xmm7
-        ;addps xmm8, xmm9 
-        ;addps xmm8, xmm10 
-        ;addps xmm8, xmm12
-        ;addps xmm8, xmm13
-        ;addps xmm8, xmm14
-        ;addps xmm8, xmm15 
-        ;addps xmm8, xmm11
-
-        dec ecx 
-        jnz .parallelSums       ;have to do it because of an error
-        ;ret 
+    mov rsi, x_values
+    mov rdi, y_values  
+    mov rax, 0
+    mov rbx, 0
+    .parallelSumsTwo:
+        movdqu xmm1, oword[rsi]     ;xi
+        movdqu xmm2, oword[rdi]     ;yi
+        movdqu xmm3, oword[rsi]     ;xi
+        movdqu xmm4, oword[rsi]     ;xi 
+        ;movdqu xmm4, 
+        addps xmm0, xmm1        ;sum(Xi) -> partial sums
+        addps xmm5, xmm2        ;sum(Yi) -> partial sums
+        mulps xmm3, xmm2        ;xi*yi
+        addps xmm6, xmm3        ;sum(xi*yi) -> partial sums
+        mulps xmm4, xmm1        ;xi*xi
+        addps xmm7, xmm4        ;sum(xi*xi) -> partial sums
+        add rdi, 16
+        add rsi, 16
+        add rax, 4
+        add rbx, 4
+        loop .parallelSumsTwo
 
     .helpLabel:
         mov rcx, rdx    ;mod -> number of iterations for leftovers
@@ -340,14 +332,55 @@ _start:
     cmp rcx, 0
     je .helpLabel2
 
-    .sumLeftovers:  ;not every number mod 11 = 0 :/
-        call .help_function_for_parallel_sums
-        movaps xmm4, [tmp]
-        inc rsi 
-        addps xmm8, xmm4 
+    ;so I can access the correct location
+    ;inc rax  
+    ;inc rbx
+
+    .sumLeftovers:  ;not every number mod 4 = 0 :/
+        ;call .help_function_for_parallel_sums
+        ;movaps xmm4, [tmp]
+        movss xmm12, dword[x_values + rax * 4]
+        movss xmm13, dword[y_values + rbx * 4]
+        movdqu xmm14, oword[ones]
+        movdqu xmm15, oword[ones]
+        movss xmm14, xmm12 
+        movss xmm15, xmm12 
+        mulps xmm14, xmm13
+        mulps xmm15, xmm12 
+        ;movdqu oword[tmpHelper], xmm14 ;because I added ones before 
+        ;movdqu oword[tmpHelper], xmm15 ;because I added ones before
+        ;movdqu xmm14, oword[tmpHelper]
+        ;movdqu xmm15, oword[tmpHelper]
+        addps xmm0, xmm12       ;further add to sum(xi)
+        addps xmm5, xmm13       ;further add to sum(yi)
+        addps xmm6, xmm14
+        addps xmm7, xmm15
+        inc rax 
+        inc rbx 
         loop .sumLeftovers
 
-    .helpLabel2:
+
+        .helpLabel2:
+        mov ecx, 3 
+        movdqu xmm8, xmm0       ;copy of xi sums 
+        movdqu xmm9, xmm5       ;copy of  yi sums
+        movdqu xmm10, xmm6      ;copy of (xi*yi) sums
+        movdqu xmm11, xmm7      ;copy of (xi*xi) sums
+
+    .shuffleLoop:
+        pshufd xmm8,xmm8,10_01_00_11b
+        pshufd xmm9,xmm9,10_01_00_11b
+        pshufd xmm10,xmm10,10_01_00_11b
+        pshufd xmm11,xmm11,10_01_00_11b
+        ;shuffle sums
+        addps xmm0, xmm8                ;sum xi
+        addps xmm5, xmm9                ;sum yi
+        addps xmm6, xmm10               ;sum (xi * yi)
+        addps xmm7, xmm11                ;sum (xi ^ 2)
+        loop .shuffleLoop
+
+    
+    ;.helpLabel2:
     ;XMM1(SUM(Xi))
     ;XMM2(SUM(Yi))
     ;XMM3(SUM(Xi))
@@ -355,8 +388,12 @@ _start:
     ;XMM5(SUM(Xi*Yi))
     ;XMM6(SUM(Xi))
     ;XMM8(SUM(Xi^2))
+    call .clear_necessary_registers
 
-    movdqu oword[final_helper], xmm8 
+    movdqu oword[final_helper], xmm0 
+    movdqu oword[final_helper + 4], xmm5 
+    movdqu oword[final_helper + 8], xmm6 
+    movdqu oword[final_helper + 12], xmm7 
 
     call .clean_registers
     call .clear_xmm_registers
@@ -368,31 +405,13 @@ _start:
     movss xmm5, dword[final_helper + 8]
     movss xmm8, dword[final_helper + 12]
     mov eax, dword[num_of_elements]
-    cvtsi2sd xmm15, eax
-    cvtpd2ps xmm15, xmm15
+    cvtsi2sd xmm4, eax
+    cvtpd2ps xmm4, xmm4
 
     ;1,3,6,2,5,8,15 cleared!
     ;xmm7 -> xmm14
     ;xmm9 -> xmm13, cuz i copied from up somewhere
-    movss xmm7, xmm5
-    movss xmm9, xmm2  
-    divss xmm9, xmm1 
-    mulss xmm9, xmm8 
-    subss xmm7, xmm9 ;WE GOT THE FIRST PART OF A
-
-    movss xmm9, xmm1
-    movss xmm10, xmm15 
-    divss xmm10, xmm1 
-    mulss xmm10, xmm8
-    subss xmm9, xmm10
-
-    divss xmm7, xmm9 ;b parameter STORED IN XMM7
-
-    movss xmm9, xmm2 
-    movss xmm10, xmm15
-    mulss xmm10, xmm7
-    subss xmm9, xmm10 
-    divss xmm9, xmm1 ;a parameter STORED IN XMM9
+    call .calculate_parameters
 
     ret 
 
