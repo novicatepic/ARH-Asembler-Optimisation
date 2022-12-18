@@ -122,15 +122,15 @@ _start:
 
     call .clean_registers
 
-    call .no_parallelism
-    call .write_parameters_into_output_file
+    ;call .no_parallelism
+    ;call .write_parameters_into_output_file
 
     ;parameters written into output file as they should be
 
     call .clean_registers
 
-    ;call .parallelism
-    ;call .write_parameters_into_output_file
+    call .parallelism
+    call .write_parameters_into_output_file
 
     call .clean_registers
 

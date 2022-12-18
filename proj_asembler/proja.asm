@@ -13,8 +13,8 @@ SECTION .bss
     entry_file_path resq 1
     output_file_path resq 1
     num_of_elements resq 1   
-    x_values resq 100000
-    y_values resq 100000
+    x_values resd 100000
+    y_values resd 100000
     rez resd 1
     ;final_helper resd 4
     
