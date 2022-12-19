@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <unistd.h>
+#include <math.h>
 
 #ifndef RAND_MAX
 #define RAND_MAX ((int) (unsigned)~0 >> 1)
@@ -15,20 +16,25 @@ float generateRandomFloat(float low, float high) {
     return (low + result * (high - low));
 }
 
-int num_elements = 99999;
+int num_elements = 1000000;
 
 int main() {
     srand((int)time(NULL));
-    float xValues[num_elements];
-    float yValues[num_elements];
+    float *xValues, *yValues;
+    xValues = (float*)calloc(num_elements, sizeof(float));
+    yValues = (float*)calloc(num_elements, sizeof(float));
 
     FILE* fp = fopen("entry_file2", "wb");
 
     if(fp != NULL) {
         fwrite(&num_elements, sizeof(int), 1, fp);
         for(int i = 0; i < num_elements; i++) {
-            xValues[i] = (float)generateRandomFloat(1, 10000);
-            yValues[i] = (float)generateRandomFloat(1, 10000);
+            //float num1 = roundf(generateRandomFloat(1, 10) * 100) / 100;
+            //printf("num1 = %4.2f",num1);
+            //float num2 = roundf(generateRandomFloat(1000, 2000) * 100) / 100;
+            //printf("num2 = %4.2f",num2);
+            xValues[i] = (float)5.0;//generateRandomFloat(1.0, 100.0);
+            yValues[i] = (float)6.0;//generateRandomFloat(1000000.0, 1500000.0);
         }
         fwrite(xValues, sizeof(float), num_elements, fp);
         fwrite(yValues, sizeof(float), num_elements, fp);

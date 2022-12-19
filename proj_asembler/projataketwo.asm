@@ -15,8 +15,8 @@ SECTION .bss
     entry_file_path resq 1
     output_file_path resq 1
     num_of_elements resq 1   
-    x_values resd 100000
-    y_values resd 100000
+    x_values resd 10000000
+    y_values resd 10000000
     rez resd 1
     ;final_helper resd 4
     
@@ -122,15 +122,15 @@ _start:
 
     call .clean_registers
 
-    ;call .no_parallelism
-    ;call .write_parameters_into_output_file
+    call .no_parallelism
+    call .write_parameters_into_output_file
 
     ;parameters written into output file as they should be
 
     call .clean_registers
 
-    call .parallelism
-    call .write_parameters_into_output_file
+    ;call .parallelism
+    ;call .write_parameters_into_output_file
 
     call .clean_registers
 
@@ -171,8 +171,26 @@ _start:
     .sumX:  
         movss xmm1, dword[x_values + rsi * 4]
         addss xmm3, xmm1                        ;IN XMM3 IS PLACED SUM(Xi) i = 1,...,num_of_elements
+
+        ;cmp rsi, 9999998
+        ;je .heh 
+        
+        ;.heh
+
+        ;movss xmm1, dword[y_values + rsi * 4]
+        ;addss xmm2, xmm1                        ;sum(yi)
+        ;movss xmm1, dword[x_values + rsi * 4]
+        ;movss xmm4, dword[y_values + rsi * 4]
+        ;mulss xmm1, xmm4 
+        ;addss xmm5, xmm1                        ;sum(xi*yi)
+        ;movss xmm6, dword[x_values + rsi * 4]
+        ;movss xmm7, dword[x_values + rsi * 4]
+        ;mulss xmm6, xmm7 
+        ;addss xmm8, xmm6 
         inc rsi 
         loop .sumX
+
+    ;.heh:
 
     mov ecx, dword[num_of_elements]
     mov rsi, 0
