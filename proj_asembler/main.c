@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 
 int main(int argc, char **argv)
 {
@@ -27,15 +28,15 @@ int main(int argc, char **argv)
             sumY += yValues[i];
             sumX += xValues[i];
             float sumSq = xValues[i] * xValues[i];
-            printf("xv * xv = %4.2f\n", sumSq);
+            //printf("xv * xv = %4.2f\n", sumSq);
             sumXSquare = sumXSquare + (xValues[i] * xValues[i]);
-            printf("sumxsquare = %4.2f\n", sumXSquare);
+            //printf("sumxsquare = %4.2f\n", sumXSquare);
         }
         
-        printf("SUM X = %4.2f", sumX);
-        printf("SUM Y = %4.2f", sumX);
-        printf("SUM X*Y = %4.2f", sumXmultiplY);
-        printf("SUM X^2 = %4.2f", sumXSquare);
+        //printf("SUM X = %4.2f", sumX);
+        //printf("SUM Y = %4.2f", sumY);
+        //printf("SUM X*Y = %4.2f", sumXmultiplY);
+        //printf("SUM X^2 = %4.2f", sumXSquare);
 
         b = (sumXmultiplY - (sumY / sumX) * sumXSquare) / (sumX - (numElements / sumX) * sumXSquare);
         a = (sumY - numElements * b) / sumX;

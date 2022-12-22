@@ -16,7 +16,7 @@ float generateRandomFloat(float low, float high) {
     return (low + result * (high - low));
 }
 
-int num_elements = 1000000;
+int num_elements = 100000;
 
 int main() {
     srand((int)time(NULL));
@@ -33,8 +33,8 @@ int main() {
             //printf("num1 = %4.2f",num1);
             //float num2 = roundf(generateRandomFloat(1000, 2000) * 100) / 100;
             //printf("num2 = %4.2f",num2);
-            xValues[i] = (float)5.0;//generateRandomFloat(1.0, 100.0);
-            yValues[i] = (float)6.0;//generateRandomFloat(1000000.0, 1500000.0);
+            xValues[i] = generateRandomFloat(1.0, 10.0);
+            yValues[i] = generateRandomFloat(1.0, 10.0);
         }
         fwrite(xValues, sizeof(float), num_elements, fp);
         fwrite(yValues, sizeof(float), num_elements, fp);
