@@ -13,8 +13,8 @@ SECTION .bss
     entry_file_path resq 1
     output_file_path resq 1
     num_of_elements resq 1   
-    x_values resq 10000000
-    y_values resq 10000000
+    x_values resq 1
+    y_values resq 1
     rez resd 1
     tmpBSS resd 4
     tmpBSS1 resd 4
@@ -90,7 +90,7 @@ _start:
 
     pop rdi  ;file descriptor was on stack, poping it back so I can work with files
     push rdi 
-    mov rsi, x_values   ;this should read into x_values, right?
+    mov rsi, [x_values]   ;this should read into x_values, right?
     mov rdx, rax      ;test, was 40
     mov rax, 0 
     syscall
@@ -99,7 +99,7 @@ _start:
 
     pop rdi  ;file descriptor was on stack, poping it back so I can work with files
     push rdi  
-    mov rsi, y_values   ;this should read into y_values
+    mov rsi, [y_values]   ;this should read into y_values
     mov rdx, rax     
     mov rax, 0 
     syscall
@@ -317,8 +317,9 @@ _start:
     mov rsi, 0
     cmp rax, 0
     je .helpLabel
-    mov rsi, x_values
-    mov rdi, y_values  
+    ;WAS WITHOUT []
+    mov rsi, [x_values]
+    mov rdi, [y_values]  
     .parallelSumsTwo:
         vmovdqu ymm1, yword[rsi]     ;xi
         vmovdqu ymm2, yword[rdi]     ;yi
@@ -363,37 +364,47 @@ _start:
     vmovdqu yword[tmpBSS],ymm0
     
     .loopX1:
+        vmovdqu yword[tmpBSS],ymm0
         movsd xmm12, qword[tmpBSS + rsi * 8]
         addsd xmm0, xmm12
-        inc rsi 
-        loop .loopX1
-
-    mov rsi, 1
-    mov rcx, 3
-    vmovdqu yword[tmpBSS],ymm5
-    .loopY1:
+        vmovdqu yword[tmpBSS],ymm5
         movsd xmm12, qword[tmpBSS + rsi * 8]
         addsd xmm5, xmm12 
-        inc rsi 
-        loop .loopY1
-    
-    mov rsi, 1
-    mov rcx, 3
-    vmovdqu yword[tmpBSS],ymm6
-    .loopXY:
-    movsd xmm12, qword[tmpBSS + rsi * 8]
-       addsd xmm6, xmm12 
-        inc rsi 
-        loop .loopXY
-   
-    mov rsi, 1
-    mov rcx, 3
-    vmovdqu yword[tmpBSS],ymm7
-    .loopXX:
+        vmovdqu yword[tmpBSS],ymm6
+        movsd xmm12, qword[tmpBSS + rsi * 8]
+        addsd xmm6, xmm12 
+        vmovdqu yword[tmpBSS],ymm7
         movsd xmm12, qword[tmpBSS + rsi * 8]
         addsd xmm7, xmm12 
         inc rsi 
-        loop .loopXX
+        loop .loopX1
+
+    ;mov rsi, 1
+    ;mov rcx, 3
+    ;vmovdqu yword[tmpBSS],ymm5
+    ;.loopY1:
+    ;    movsd xmm12, qword[tmpBSS + rsi * 8]
+    ;    addsd xmm5, xmm12 
+    ;    inc rsi 
+    ;    loop .loopY1
+    
+    ;mov rsi, 1
+    ;mov rcx, 3
+    ;vmovdqu yword[tmpBSS],ymm6
+    ;.loopXY:
+    ;movsd xmm12, qword[tmpBSS + rsi * 8]
+    ;   addsd xmm6, xmm12 
+    ;    inc rsi 
+    ;    loop .loopXY
+  ; 
+    ;mov rsi, 1
+    ;mov rcx, 3
+    ;vmovdqu yword[tmpBSS],ymm7
+    ;.loopXX:
+    ;    movsd xmm12, qword[tmpBSS + rsi * 8]
+    ;    addsd xmm7, xmm12 
+    ;    inc rsi 
+    ;    loop .loopXX
     
     ;cvtsi2sd xmm15, ymm0
     

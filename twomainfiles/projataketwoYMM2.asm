@@ -10,11 +10,13 @@ SECTION .data align=16
     rez2 resq 0
     
 SECTION .bss
+    ;x_values resq 1
+    ;y_values resq 1
     entry_file_path resq 1
     output_file_path resq 1
     num_of_elements resq 1   
-    x_values resq 1000000
-    y_values resq 1000000
+    x_values resq 1
+    y_values resq 1
     rez resd 1
     tmpBSS resd 4
     ;rez2 resq 1
@@ -80,6 +82,7 @@ _start:
     ;allocating space for y values                        
     mov rsi, rax                        ;allocating number_of_elements bytes for y array, it was rax before, now just testing
     call .set_up_parameters_for_allocation
+    ;mov rax, 9
     syscall
     mov [y_values], rax
 
@@ -87,7 +90,7 @@ _start:
 
     pop rdi  ;file descriptor was on stack, poping it back so I can work with files
     push rdi 
-    mov rsi, x_values   ;this should read into x_values, right?
+    mov rsi, [x_values]   ;this should read into x_values, right?
     mov rdx, rax      ;test, was 40
     mov rax, 0 
     syscall
@@ -96,7 +99,7 @@ _start:
 
     pop rdi  ;file descriptor was on stack, poping it back so I can work with files
     push rdi  
-    mov rsi, y_values   ;this should read into y_values
+    mov rsi, [y_values]   ;this should read into y_values
     mov rdx, rax     
     mov rax, 0 
     syscall
@@ -165,24 +168,47 @@ _start:
     ret 
 
 .no_parallelism:
+    ;call .clear_xmm_registers
+    ;mov ecx, dword[num_of_elements]      ;how many times it's going to loop
+    ;mov rsi, 0                         
+    ;.sumX:  
+    ;    movsd xmm1, qword[x_values + rsi * 8]
+    ;    addsd xmm3, xmm1                        ;IN XMM3 IS PLACED SUM(Xi) i = 1,...,num_of_elements;
+
+    ;    movsd xmm1, qword[y_values + rsi * 8]
+    ;    addsd xmm2, xmm1                        ;sum(yi)
+    ;    movsd xmm1, qword[x_values + rsi * 8]
+    ;    movsd xmm4, qword[y_values + rsi * 8]
+    ;    mulsd xmm1, xmm4 
+    ;    addsd xmm5, xmm1                        ;sum(xi*yi)
+    ;    movsd xmm6, qword[x_values + rsi * 8]
+    ;    movsd xmm7, qword[x_values + rsi * 8]
+    ;    mulsd xmm6, xmm7 
+    ;    addsd xmm8, xmm6 
+    ;    inc rsi 
+    ;    loop .sumX
+
     call .clear_xmm_registers
     mov ecx, dword[num_of_elements]      ;how many times it's going to loop
-    mov rsi, 0                         
+    mov rsi, [x_values]
+    mov rdi, [y_values]
+    mov rax, 0                        
     .sumX:  
-        movsd xmm1, qword[x_values + rsi * 8]
+        movsd xmm1, qword [rsi]
         addsd xmm3, xmm1                        ;IN XMM3 IS PLACED SUM(Xi) i = 1,...,num_of_elements
 
-        movsd xmm1, qword[y_values + rsi * 8]
+        movsd xmm1, qword[rdi]
         addsd xmm2, xmm1                        ;sum(yi)
-        movsd xmm1, qword[x_values + rsi * 8]
-        movsd xmm4, qword[y_values + rsi * 8]
+        movsd xmm1, qword[rsi]
+        movsd xmm4, qword[rdi]
         mulsd xmm1, xmm4 
         addsd xmm5, xmm1                        ;sum(xi*yi)
-        movsd xmm6, qword[x_values + rsi * 8]
-        movsd xmm7, qword[x_values + rsi * 8]
+        movsd xmm6, qword[rsi]
+        movsd xmm7, qword[rsi]
         mulsd xmm6, xmm7 
         addsd xmm8, xmm6 
-        inc rsi 
+        add rsi, 8
+        add rdi, 8
         loop .sumX
 
     ;mov ecx, dword[num_of_elements]

@@ -1,16 +1,27 @@
 SECTION .data align=16
     tmp dd 1.0, 2.0, 3.0, 4.0
+    tmp2 dd 50.0,45.0,65.0,78.0
+    temp3 dq 50.0,45.0,65.0,78.0
     error_string db "Something went wrong!", 0
     error_string_length EQU $ - error_string
+    final_helper dq 1.0, 2.0, 3.0, 4.0
+    ones dq 1.0, 1.0
+    tmpHelper dd 1.0
+    rez2 resq 0
     
 SECTION .bss
     entry_file_path resq 1
     output_file_path resq 1
     num_of_elements resq 1   
-    x_values resq 1000000
-    y_values resq 1000000
+    x_values resq 1
+    y_values resq 1
     rez resd 1
     tmpBSS resd 4
+    tmpBSS1 resd 4
+    tmpBSS2 resd 4
+    tmpBSS3 resd 4
+    ;rez2 resq 1
+    ;final_helper resd 4
     
 SECTION .text
 global _start
@@ -79,7 +90,7 @@ _start:
 
     pop rdi  ;file descriptor was on stack, poping it back so I can work with files
     push rdi 
-    mov rsi, x_values   ;this should read into x_values, right?
+    mov rsi, [x_values]   ;this should read into x_values, right?
     mov rdx, rax      ;test, was 40
     mov rax, 0 
     syscall
@@ -88,7 +99,7 @@ _start:
 
     pop rdi  ;file descriptor was on stack, poping it back so I can work with files
     push rdi  
-    mov rsi, y_values   ;this should read into y_values
+    mov rsi, [y_values]   ;this should read into y_values
     mov rdx, rax     
     mov rax, 0 
     syscall
@@ -306,8 +317,9 @@ _start:
     mov rsi, 0
     cmp rax, 0
     je .helpLabel
-    mov rsi, x_values
-    mov rdi, y_values  
+    ;WAS WITHOUT []
+    mov rsi, [x_values]
+    mov rdi, [y_values]  
     .parallelSumsTwo:
         vmovdqu ymm1, yword[rsi]     ;xi
         vmovdqu ymm2, yword[rdi]     ;yi
@@ -347,18 +359,10 @@ _start:
 
     .helpLabel2:
 
-    ;mov rsi, 1
-    ;mov rcx, 3
-    ;vmovdqu yword[tmpBSS],ymm0
-    
-    ;.loopX1:
-    ;    movsd xmm12, qword[tmpBSS + rsi * 8]
-    ;    addsd xmm0, xmm12
-    ;    inc rsi 
-    ;    loop .loopX1
-
     mov rsi, 1
     mov rcx, 3
+    vmovdqu yword[tmpBSS],ymm0
+    
     .loopX1:
         vmovdqu yword[tmpBSS],ymm0
         movsd xmm12, qword[tmpBSS + rsi * 8]
@@ -392,7 +396,7 @@ _start:
     ;   addsd xmm6, xmm12 
     ;    inc rsi 
     ;    loop .loopXY
-   
+  ; 
     ;mov rsi, 1
     ;mov rcx, 3
     ;vmovdqu yword[tmpBSS],ymm7
@@ -402,8 +406,42 @@ _start:
     ;    inc rsi 
     ;    loop .loopXX
     
+    ;cvtsi2sd xmm15, ymm0
+    
+    
+    ;.helpLabel2:
+    ;XMM1(SUM(Xi))
+    ;XMM2(SUM(Yi))
+    ;XMM3(SUM(Xi))
+    ;XMM4(n)
+    ;XMM5(SUM(Xi*Yi))
+    ;XMM6(SUM(Xi))
+    ;XMM8(SUM(Xi^2))
+    ;call .clear_necessary_registers
+
+    ;vmovdqu yword[final_helper], ymm0 
+    ;vmovdqu yword[final_helper + 8], ymm5 
+    ;vmovdqu yword[final_helper + 16], ymm6 
+    ;vmovdqu yword[final_helper + 24], ymm7 
+
+    ;call .clean_registers
+    ;call .clear_xmm_registers
+
+    ;movsd xmm1, qword[final_helper]
+    ;movsd xmm3, qword[final_helper] 
+    ;movsd xmm6, qword[final_helper] 
+    ;movsd xmm2, qword[final_helper + 8]
+    ;movsd xmm5, qword[final_helper + 16]
+    ;movsd xmm8, qword[final_helper + 24]
     mov eax, dword[num_of_elements]
     cvtsi2sd xmm4, eax
+    ;cvtpd2ps xmm4, xmm4
+
+    ;1,3,6,2,5,8,15 cleared!
+    ;xmm7 -> xmm14
+    ;xmm9 -> xmm13, cuz i copied from up somewhere
+    ;call .calculate_parameters
+
     call .calcula_parallel
 
     ret 
