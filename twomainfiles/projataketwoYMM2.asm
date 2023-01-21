@@ -25,7 +25,7 @@ SECTION .bss
 SECTION .text
 global _start
 _start:
-
+    ;clean registers just in case (not necessary)
     call .clean_registers
 
     ;allocate 4 bytes so we know num of elements we're working with
@@ -90,16 +90,16 @@ _start:
 
     pop rdi  ;file descriptor was on stack, poping it back so I can work with files
     push rdi 
-    mov rsi, [x_values]   ;this should read into x_values, right?
-    mov rdx, rax      ;test, was 40
+    mov rsi, [x_values]   ;store allocated memory into rsi
+    mov rdx, rax      
     mov rax, 0 
     syscall
 
-    call .num_elements_to_rax           ;DATA IS LOST???????
+    call .num_elements_to_rax
 
     pop rdi  ;file descriptor was on stack, poping it back so I can work with files
     push rdi  
-    mov rsi, [y_values]   ;this should read into y_values
+    mov rsi, [y_values]   ;store allocated memory into rsi, so I can read from it
     mov rdx, rax     
     mov rax, 0 
     syscall
@@ -119,7 +119,7 @@ _start:
     ;create that output file
     mov rax, 85
     mov rdi, [output_file_path]
-    mov rsi, 777o                   ;rwx for all
+    mov rsi, 777o                   ;rwx for all, permissions
     syscall
 
 
@@ -142,7 +142,7 @@ _start:
     mov rdi, 0
     syscall
 
-
+;print errors
 .mistakes_have_been_made:
     mov rax, 1
     mov rdi, 1
@@ -160,6 +160,7 @@ _start:
     xor rdi, rdi 
     ret 
 
+;rax won't work, don't know why
 .num_elements_to_rax:
     xor rax, rax 
     mov eax, dword[num_of_elements]
@@ -188,6 +189,7 @@ _start:
     ;    inc rsi 
     ;    loop .sumX
 
+    ;sums everything in a single loop, no cheating
     call .clear_xmm_registers
     mov ecx, dword[num_of_elements]      ;how many times it's going to loop
     mov rsi, [x_values]
@@ -196,7 +198,6 @@ _start:
     .sumX:  
         movsd xmm1, qword [rsi]
         addsd xmm3, xmm1                        ;IN XMM3 IS PLACED SUM(Xi) i = 1,...,num_of_elements
-
         movsd xmm1, qword[rdi]
         addsd xmm2, xmm1                        ;sum(yi)
         movsd xmm1, qword[rsi]
@@ -258,6 +259,7 @@ _start:
     call .calculate_parameters
     ret 
 
+;as per formula, calculate both a and b
 .calculate_parameters:
     movsd xmm7, xmm5  ;first operand upper side
     movsd xmm9, xmm2  

@@ -310,10 +310,10 @@ _start:
     call .clear_xmm_registers
     call .clean_registers
     mov eax, dword[num_of_elements]
-    mov rbx, 4 ;TWO DOUBLES CAN BE PUT IN ONE XMM REGISTER
+    mov rbx, 4 ;FORU DOUBLES CAN BE PUT IN ONE YMM REGISTER
     cqo 
     div rbx 
-    mov rcx, rax        ;rdx holds mod 
+    mov rcx, rax        ;rdx holds mod, so i can sum leftovers later on
     mov rsi, 0
     cmp rax, 0
     je .helpLabel
@@ -321,11 +321,11 @@ _start:
     mov rsi, [x_values]
     mov rdi, [y_values]  
     .parallelSumsTwo:
-        vmovdqu ymm1, yword[rsi]     ;xi
-        vmovdqu ymm2, yword[rdi]     ;yi
+        vmovdqu ymm1, yword[rsi]     ;xi, move 4 x values into ymm1 
+        vmovdqu ymm2, yword[rdi]     ;yi, move 4 y values into ymm2 
         vmovdqu ymm3, yword[rsi]     ;xi
         vmovdqu ymm4, yword[rsi]     ;xi 
-        vaddpd ymm0, ymm1        ;sum(Xi) -> partial sums
+        vaddpd ymm0, ymm1        ;sum(Xi) -> partial sums, parallel sums 
         vaddpd ymm5, ymm2        ;sum(Yi) -> partial sums
         vmulpd ymm3, ymm2        ;xi*yi
         vaddpd ymm6, ymm3        ;sum(xi*yi) -> partial sums
@@ -338,7 +338,7 @@ _start:
     .helpLabel:
         mov rcx, rdx    ;mod -> number of iterations for leftovers
 
-    cmp rcx, 0
+    cmp rcx, 0          ;if no leftovers, skip loop
     je .helpLabel2
 
     .sumLeftovers:  ;not every number mod 4 = 0 :/
@@ -363,6 +363,9 @@ _start:
     mov rcx, 3
     vmovdqu yword[tmpBSS],ymm0
     
+    ;no shuffle with DOUBLES
+    ;so i have to manually add values from positions 8, 16, 24 from starting position
+    ;this doesn't really affect performances because loop has 3 iterations
     .loopX1:
         vmovdqu yword[tmpBSS],ymm0
         movsd xmm12, qword[tmpBSS + rsi * 8]
@@ -442,6 +445,7 @@ _start:
     ;xmm9 -> xmm13, cuz i copied from up somewhere
     ;call .calculate_parameters
 
+    ;call function to calculate parallels, same as for unparallel part!
     call .calcula_parallel
 
     ret 
@@ -518,12 +522,13 @@ _start:
     ret 
 
 .set_up_parameters_for_allocation:
-    mov r10, 22h
-    mov r8, -1
-    mov r9, 0
-    mov rdi, 0 
-    mov rdx, 2
-    mov rax, 9
+    ;rsi, number of bytes for allocation
+    mov r10, 22h ;map anonymus , param flags into r10 register
+    mov r8, -1 ;file descriptor for map_anon is -1
+    mov r9, 0 ;offset = 0
+    mov rdi, 0   ;u rdi 0, kernel allocates memory and then returns allocated memory to rax 
+    mov rdx, 2  ;2 -> write
+    mov rax, 9 ;system call for mmap
     ret 
 
 .close_file:
