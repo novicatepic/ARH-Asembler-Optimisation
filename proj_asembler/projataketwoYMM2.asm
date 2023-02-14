@@ -10,8 +10,6 @@ SECTION .data align=16
     rez2 resq 0
     
 SECTION .bss
-    ;x_values resq 1
-    ;y_values resq 1
     entry_file_path resq 1
     output_file_path resq 1
     num_of_elements resq 1   
@@ -19,8 +17,6 @@ SECTION .bss
     y_values resq 1
     rez resd 1
     tmpBSS resd 4
-    ;rez2 resq 1
-    ;final_helper resd 4
     
 SECTION .text
 global _start
@@ -128,13 +124,6 @@ _start:
     call .no_parallelism
     call .write_parameters_into_output_file
 
-    ;parameters written into output file as they should be
-
-    ;call .clean_registers
-
-    ;call .parallelism
-    ;call .write_parameters_into_output_file
-
     call .clean_registers
 
 .end:
@@ -163,31 +152,11 @@ _start:
 .num_elements_to_rax:
     xor rax, rax 
     mov eax, dword[num_of_elements]
-    mov rbx, 8  ;moved to float data                      ;each number is double, which should be 8 bytes, so multiplying with that
+    mov rbx, 8  ;each number is double, which should be 8 bytes, so multiplying with that
     mul rbx  
     ret 
 
 .no_parallelism:
-    ;call .clear_xmm_registers
-    ;mov ecx, dword[num_of_elements]      ;how many times it's going to loop
-    ;mov rsi, 0                         
-    ;.sumX:  
-    ;    movsd xmm1, qword[x_values + rsi * 8]
-    ;    addsd xmm3, xmm1                        ;IN XMM3 IS PLACED SUM(Xi) i = 1,...,num_of_elements;
-
-    ;    movsd xmm1, qword[y_values + rsi * 8]
-    ;    addsd xmm2, xmm1                        ;sum(yi)
-    ;    movsd xmm1, qword[x_values + rsi * 8]
-    ;    movsd xmm4, qword[y_values + rsi * 8]
-    ;    mulsd xmm1, xmm4 
-    ;    addsd xmm5, xmm1                        ;sum(xi*yi)
-    ;    movsd xmm6, qword[x_values + rsi * 8]
-    ;    movsd xmm7, qword[x_values + rsi * 8]
-    ;    mulsd xmm6, xmm7 
-    ;    addsd xmm8, xmm6 
-    ;    inc rsi 
-    ;    loop .sumX
-
     call .clear_xmm_registers
     mov ecx, dword[num_of_elements]      ;how many times it's going to loop
     mov rsi, [x_values]
@@ -196,7 +165,6 @@ _start:
     .sumX:  
         movsd xmm1, qword [rsi]
         addsd xmm3, xmm1                        ;IN XMM3 IS PLACED SUM(Xi) i = 1,...,num_of_elements
-
         movsd xmm1, qword[rdi]
         addsd xmm2, xmm1                        ;sum(yi)
         movsd xmm1, qword[rsi]
@@ -210,34 +178,6 @@ _start:
         add rsi, 8
         add rdi, 8
         loop .sumX
-
-    ;mov ecx, dword[num_of_elements]
-    ;mov rsi, 0
-    ;.sumY:
-    ;    movsd xmm1, qword[y_values + rsi * 8]
-    ;    addsd xmm2, xmm1                        ;IN XMM2 IS PLACED SUM(Yi) i = 1,...,num_of_elements
-    ;    inc rsi 
-    ;    loop .sumY
-
-    ;mov ecx, dword[num_of_elements]
-    ;mov rsi, 0
-    ;.sumXMultiplY: 
-    ;    movsd xmm1, qword[x_values + rsi * 8]
-    ;    movsd xmm4, qword[y_values + rsi * 8]
-    ;    mulsd xmm1, xmm4    ;Xi*Yi
-    ;    addsd xmm5, xmm1 ;Sum(Xi*Yi)             ;PLACED IN XMM5 (COMMENTING BECAUSE IT'S EASIER FOR ME)
-    ;    inc rsi 
-    ;    loop .sumXMultiplY
-
-    ;mov ecx, dword[num_of_elements]
-    ;mov rsi, 0
-    ;.sumXSquare:
-    ;    movsd xmm6, qword[x_values + rsi * 8]
-    ;    movsd xmm7, qword[x_values + rsi * 8]
-    ;    mulsd xmm6, xmm7 ;Xi*Xi
-    ;    addsd xmm8, xmm6 ;Sum(Xi^2)
-    ;    inc rsi 
-    ;    loop .sumXSquare
 
     movsd xmm1, xmm3 
     xor rax, rax 
@@ -437,18 +377,7 @@ _start:
         addsd xmm7, xmm12 
         inc rsi 
         loop .loopXX
-    
-    
-    
-    
-    ;.helpLabel2:
-    ;XMM1(SUM(Xi))
-    ;XMM2(SUM(Yi))
-    ;XMM3(SUM(Xi))
-    ;XMM4(n)
-    ;XMM5(SUM(Xi*Yi))
-    ;XMM6(SUM(Xi))
-    ;XMM8(SUM(Xi^2))
+
     call .clear_necessary_registers
 
     vmovdqu yword[final_helper], ymm0 

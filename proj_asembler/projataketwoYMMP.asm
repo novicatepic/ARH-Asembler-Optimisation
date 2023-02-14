@@ -379,60 +379,6 @@ _start:
         inc rsi 
         loop .loopX1
 
-    ;mov rsi, 1
-    ;mov rcx, 3
-    ;vmovdqu yword[tmpBSS],ymm5
-    ;.loopY1:
-    ;    movsd xmm12, qword[tmpBSS + rsi * 8]
-    ;    addsd xmm5, xmm12 
-    ;    inc rsi 
-    ;    loop .loopY1
-    
-    ;mov rsi, 1
-    ;mov rcx, 3
-    ;vmovdqu yword[tmpBSS],ymm6
-    ;.loopXY:
-    ;movsd xmm12, qword[tmpBSS + rsi * 8]
-    ;   addsd xmm6, xmm12 
-    ;    inc rsi 
-    ;    loop .loopXY
-  ; 
-    ;mov rsi, 1
-    ;mov rcx, 3
-    ;vmovdqu yword[tmpBSS],ymm7
-    ;.loopXX:
-    ;    movsd xmm12, qword[tmpBSS + rsi * 8]
-    ;    addsd xmm7, xmm12 
-    ;    inc rsi 
-    ;    loop .loopXX
-    
-    ;cvtsi2sd xmm15, ymm0
-    
-    
-    ;.helpLabel2:
-    ;XMM1(SUM(Xi))
-    ;XMM2(SUM(Yi))
-    ;XMM3(SUM(Xi))
-    ;XMM4(n)
-    ;XMM5(SUM(Xi*Yi))
-    ;XMM6(SUM(Xi))
-    ;XMM8(SUM(Xi^2))
-    ;call .clear_necessary_registers
-
-    ;vmovdqu yword[final_helper], ymm0 
-    ;vmovdqu yword[final_helper + 8], ymm5 
-    ;vmovdqu yword[final_helper + 16], ymm6 
-    ;vmovdqu yword[final_helper + 24], ymm7 
-
-    ;call .clean_registers
-    ;call .clear_xmm_registers
-
-    ;movsd xmm1, qword[final_helper]
-    ;movsd xmm3, qword[final_helper] 
-    ;movsd xmm6, qword[final_helper] 
-    ;movsd xmm2, qword[final_helper + 8]
-    ;movsd xmm5, qword[final_helper + 16]
-    ;movsd xmm8, qword[final_helper + 24]
     mov eax, dword[num_of_elements]
     cvtsi2sd xmm4, eax
     ;cvtpd2ps xmm4, xmm4
